@@ -1,7 +1,7 @@
 {
-  "appName": { "message": "SFMC QuickSave" },
+  "appName": { "message": "SFMC Email & Template QuickSave" },
   "appDesc": { "message": "Baixe emails e templates do Marketing Cloud rapidamente." },
-  "brandName": { "message": "QuickSave" },
+  "brandName": { "message": "SFMC Email &a& Template QuickSave" },
   "checkingSession": { "message": "Verificando sessão..." },
   "actionsTitle": { "message": "AÇÕES" },
   "refresh": { "message": "Recarregar" },

@@ -1,3 +1,54 @@
+const translations = {
+  pt_BR: {
+    brandName: "SFMC Email & Template QuickSave",
+    checkingSession: "Verificando sessão...",
+    actionsTitle: "AÇÕES",
+    refresh: "Recarregar",
+    expand: "Expandir",
+    collapse: "Recolher",
+    filtersTitle: "FILTROS",
+    foldersTitle: "Pastas & Conteúdo",
+    loading: "Carregando...",
+    downloadSelected: "Baixar Selecionados",
+    sessionErrorTitle: "Sem Sessão",
+    sessionErrorDesc: "Faça login no Marketing Cloud para continuar.",
+    tryAgain: "Tentar Novamente",
+    connected: "Conectado",
+    sessionLost: "Sessão não detectada",
+    emptyFolder: "Vazia",
+    downloading: "Baixando...",
+    processing: "Processando",
+    success: "Sucesso!",
+    error: "Erro",
+    noContent: "Sem conteúdo selecionado.",
+    developedBy: "Desenvolvido por"
+  },
+  en: {
+    brandName: "SFMC Email & Template QuickSave",
+    checkingSession: "Checking session...",
+    actionsTitle: "ACTIONS",
+    refresh: "Reload",
+    expand: "Expand",
+    collapse: "Collapse",
+    filtersTitle: "FILTERS",
+    foldersTitle: "Folders & Content",
+    loading: "Loading...",
+    downloadSelected: "Download Selected",
+    sessionErrorTitle: "No Session",
+    sessionErrorDesc: "Please login to Marketing Cloud to continue.",
+    tryAgain: "Try Again",
+    connected: "Connected",
+    sessionLost: "Session not detected",
+    emptyFolder: "Empty",
+    downloading: "Downloading...",
+    processing: "Processing",
+    success: "Success!",
+    error: "Error",
+    noContent: "No content selected.",
+    developedBy: "Developed by"
+  }
+};
+let currentLang = localStorage.getItem('sfmc_lang') || 'pt_BR';
 const state = {
   stack: null,
   categories: [],
@@ -5,7 +56,9 @@ const state = {
   assets: {},
   selectedAssets: new Set(),
   loadedCategories: new Set(),
-  isLoading: false
+  isLoading: false,
+  statusKey: 'checkingSession',
+  statusExtra: '' 
 };
 const elements = {
   statusStrip: null,
@@ -23,7 +76,7 @@ const elements = {
 };
 document.addEventListener('DOMContentLoaded', async () => {
   initElements();
-  localizeHtml();
+  setLanguage(currentLang);
   initEventListeners();
   await checkSession();
 });
@@ -45,23 +98,32 @@ function initElements() {
     block: document.getElementById('filter-htmlblock')
   };
 }
-function localizeHtml() {
+function setLanguage(lang) {
+  if (!translations[lang]) return;
+  currentLang = lang;
+  localStorage.setItem('sfmc_lang', lang);
+  const t = translations[lang];
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
-    const msg = chrome.i18n.getMessage(key);
-    if (msg) el.textContent = msg;
+    if (t[key]) el.textContent = t[key];
   });
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.lang === lang);
+  });
+  refreshStatusText();
+  updateSelectionCount();
+}
+function getMsg(key) {
+  return translations[currentLang][key] || key;
 }
 function initEventListeners() {
-  document.getElementById('btn-refresh').addEventListener('click', refreshCategories);
+  document.getElementById('btn-refresh').addEventListener('click', fullReload);
   document.getElementById('btn-expand-all').addEventListener('click', expandAllFolders);
   document.getElementById('btn-collapse-all').addEventListener('click', collapseAllFolders);
   document.getElementById('btn-retry').addEventListener('click', checkSession);
   document.getElementById('modal-close-btn').addEventListener('click', () => elements.overlayMsg.classList.add('hidden'));
   elements.btnDownload.addEventListener('click', downloadSelected);
   elements.selectAll.addEventListener('change', toggleSelectAll);
-  
-  // Author Link Handler
   const authorLink = document.getElementById('author-link');
   if (authorLink) {
     authorLink.addEventListener('click', (e) => {
@@ -69,13 +131,31 @@ function initEventListeners() {
       chrome.tabs.create({ url: 'https://linkedin.com/in/jolucas240' });
     });
   }
-
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      setLanguage(e.target.closest('button').dataset.lang);
+    });
+  });
   Object.values(elements.filters).forEach(filter => {
     filter.addEventListener('change', reloadCurrentFolders);
   });
 }
+async function fullReload() {
+  state.categories = [];
+  state.categoryTree = {};
+  state.assets = {};
+  state.loadedCategories.clear();
+  state.selectedAssets.clear();
+  updateSelectionCount();
+  elements.folderTree.innerHTML = `
+    <div class="placeholder-state">
+      <div class="spinner"></div>
+      <p>${getMsg('loading')}</p>
+    </div>`;
+  await checkSession();
+}
 async function checkSession() {
-  updateStatus('warning', chrome.i18n.getMessage('checkingSession'));
+  updateStatus('warning', 'checkingSession');
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tab || !tab.url) {
@@ -89,17 +169,28 @@ async function checkSession() {
       stack: state.stack
     });
     if (response.success && response.hasSession) {
-      updateStatus('success', `${chrome.i18n.getMessage('connected')} (${state.stack.replace('.', '')})`);
+      updateStatus('success', 'connected', ` (${state.stack.replace('.', '')})`);
       showMainContent();
       if (state.categories.length === 0) await loadCategories();
     } else {
       showLoginRequired();
-      updateStatus('error', chrome.i18n.getMessage('sessionLost'));
+      updateStatus('error', 'sessionLost');
     }
   } catch (error) {
     console.error(error);
     showLoginRequired();
+    updateStatus('error', 'error');
   }
+}
+function updateStatus(type, key, extra = '') {
+  state.statusKey = key;
+  state.statusExtra = extra;
+  elements.statusStrip.className = `status-strip ${type}`;
+  refreshStatusText();
+}
+function refreshStatusText() {
+  const text = getMsg(state.statusKey) + state.statusExtra;
+  if(elements.statusText) elements.statusText.textContent = text;
 }
 function detectStackFromUrl(url) {
   if (!url) return null;
@@ -116,7 +207,7 @@ async function loadCategories() {
   elements.folderTree.innerHTML = `
     <div class="placeholder-state">
       <div class="spinner"></div>
-      <p>${chrome.i18n.getMessage('loading')}</p>
+      <p>${getMsg('loading')}</p>
     </div>`;
   try {
     const response = await sendMessage({
@@ -128,10 +219,10 @@ async function loadCategories() {
       buildCategoryTree();
       renderFolderTree();
     } else {
-      showMessage(chrome.i18n.getMessage('error') + ': ' + response.error);
+      elements.folderTree.innerHTML = `<div style="padding:16px;text-align:center;color:red">${getMsg('error')}: ${response.error}</div>`;
     }
   } catch (error) {
-    showMessage(chrome.i18n.getMessage('error') + ': ' + error.message);
+    elements.folderTree.innerHTML = `<div style="padding:16px;text-align:center;color:red">${getMsg('error')}: ${error.message}</div>`;
   }
 }
 function buildCategoryTree() {
@@ -159,7 +250,7 @@ function renderFolderTree() {
   elements.folderTree.innerHTML = '';
   const roots = Object.values(state.categoryTree).sort((a, b) => a.name.localeCompare(b.name));
   if (roots.length === 0) {
-    elements.folderTree.innerHTML = '<div style="padding:16px;text-align:center">No folders found</div>';
+    elements.folderTree.innerHTML = `<div style="padding:16px;text-align:center">${getMsg('noContent')}</div>`;
     return;
   }
   roots.forEach(category => {
@@ -216,15 +307,13 @@ async function toggleFolder(row, category, childrenContainer) {
 async function loadAssetsForCategory(categoryId) {
   const assetsContainer = document.querySelector(`.assets-container[data-category-id="${categoryId}"]`);
   if (!assetsContainer) return;
-  
   const assetTypes = getSelectedAssetTypes();
   if (assetTypes.length === 0) {
     renderAssets(assetsContainer, []);
     state.loadedCategories.add(categoryId);
     return;
   }
-
-  assetsContainer.innerHTML = '<div style="padding:8px;font-size:11px;color:#999;">' + chrome.i18n.getMessage('loading') + '</div>';
+  assetsContainer.innerHTML = `<div style="padding:8px;font-size:11px;color:#999;">${getMsg('loading')}</div>`;
   try {
     const response = await sendMessage({
       action: 'getAssetsByCategory',
@@ -238,10 +327,10 @@ async function loadAssetsForCategory(categoryId) {
       state.loadedCategories.add(categoryId);
       renderAssets(assetsContainer, assets);
     } else {
-      assetsContainer.innerHTML = '<div style="padding:8px;color:red;">Error</div>';
+      assetsContainer.innerHTML = `<div style="padding:8px;color:red;">${getMsg('error')}</div>`;
     }
   } catch (error) {
-    assetsContainer.innerHTML = '<div style="padding:8px;color:red;">Error</div>';
+    assetsContainer.innerHTML = `<div style="padding:8px;color:red;">${getMsg('error')}</div>`;
   }
 }
 function getSelectedAssetTypes() {
@@ -254,7 +343,7 @@ function getSelectedAssetTypes() {
 function renderAssets(container, assets) {
   container.innerHTML = '';
   if (assets.length === 0) {
-    container.innerHTML = `<div style="padding:8px;font-size:11px;color:#999;">${chrome.i18n.getMessage('emptyFolder')}</div>`;
+    container.innerHTML = `<div style="padding:8px;font-size:11px;color:#999;">${getMsg('emptyFolder')}</div>`;
     return;
   }
   assets.forEach(asset => {
@@ -320,7 +409,7 @@ function updateSelectionCount() {
   const count = state.selectedAssets.size;
   elements.selectionCount.textContent = count;
   elements.selectionCount.style.display = count === 0 ? 'none' : 'inline-block';
-  const baseText = chrome.i18n.getMessage('downloadSelected');
+  const baseText = getMsg('downloadSelected');
   elements.btnText.textContent = count > 0 ? `${baseText} (${count})` : baseText;
   elements.btnDownload.disabled = count === 0;
   elements.selectAll.checked = count > 0;
@@ -333,15 +422,6 @@ function toggleSelectAll() {
     const assetId = parseInt(cb.dataset.assetId);
     toggleAssetSelection({ id: assetId }, isChecked);
   });
-}
-async function refreshCategories() {
-  state.categories = [];
-  state.categoryTree = {};
-  state.assets = {};
-  state.loadedCategories.clear();
-  state.selectedAssets.clear();
-  updateSelectionCount();
-  await loadCategories();
 }
 async function reloadCurrentFolders() {
   state.assets = {};
@@ -392,18 +472,18 @@ function collapseAllFolders() {
 }
 async function downloadSelected() {
   if (typeof JSZip === 'undefined') {
-    showMessage('Erro: Arquivo jszip.min.js não encontrado.');
+    showMessage(`${getMsg('error')}: jszip.min.js not found`);
     return;
   }
   if (state.selectedAssets.size === 0) return;
   const assetIds = Array.from(state.selectedAssets);
   const total = assetIds.length;
-  showLoading(chrome.i18n.getMessage('downloading'));
+  showLoading(getMsg('downloading'));
   updateProgress(0, total);
   try {
     const files = [];
     for (let i = 0; i < total; i++) {
-      updateProgress(i, total, `${chrome.i18n.getMessage('processing')} ${i+1}/${total}`);
+      updateProgress(i, total, `${getMsg('processing')} ${i+1}/${total}`);
       const assetId = assetIds[i];
       const response = await sendMessage({
         action: 'getAssetContent',
@@ -427,12 +507,12 @@ async function downloadSelected() {
       } else {
         await downloadAsZip(files);
       }
-      showMessage(chrome.i18n.getMessage('success'));
+      showMessage(getMsg('success'));
     } else {
-      showMessage(chrome.i18n.getMessage('noContent'));
+      showMessage(getMsg('noContent'));
     }
   } catch (error) {
-    showMessage(chrome.i18n.getMessage('error') + ': ' + error.message);
+    showMessage(`${getMsg('error')}: ${error.message}`);
   } finally {
     hideLoading();
   }
@@ -440,7 +520,7 @@ async function downloadSelected() {
 async function downloadSingleFile(file) {
   const blob = new Blob([file.content], { type: 'text/html' });
   const url = URL.createObjectURL(blob);
-  const downloadId = await chrome.downloads.download({
+  await chrome.downloads.download({
     url: url,
     filename: file.name
   });
@@ -469,10 +549,6 @@ function sendMessage(message) {
       }
     });
   });
-}
-function updateStatus(type, text) {
-  elements.statusStrip.className = `status-strip ${type}`;
-  elements.statusText.textContent = text;
 }
 function showLoginRequired() {
   elements.appLayout.classList.add('hidden');
