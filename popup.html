@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SFMC QuickSave</title>
+  <title>SFMC Email &amp; Template QuickSave</title>
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <link rel="stylesheet" href="popup.css">
 </head>
@@ -11,15 +11,13 @@
   <nav class="navbar">
     <div class="brand">
       <span class="material-icons brand-icon">cloud_download</span>
-      <span class="brand-text" data-i18n="brandName">QuickSave</span>
+      <span class="brand-text" data-i18n="brandName">SFMC Email &amp; Template QuickSave</span>
     </div>
   </nav>
-
   <div id="status-strip" class="status-strip warning">
     <span class="material-icons status-icon">sync</span>
     <span id="status-text" class="status-text" data-i18n="checkingSession">Verificando...</span>
   </div>
-
   <div class="app-layout">
     <aside class="sidebar">
       <div class="sidebar-group">
@@ -37,7 +35,6 @@
           <span data-i18n="collapse">Recolher</span>
         </button>
       </div>
-
       <div class="sidebar-group">
         <label class="sidebar-label" data-i18n="filtersTitle">FILTROS</label>
         <div class="toggle-group">
@@ -56,7 +53,6 @@
         </div>
       </div>
     </aside>
-
     <main class="content-area">
       <div class="list-header">
         <label class="checkbox-wrapper select-all-wrapper">
@@ -66,7 +62,6 @@
         <span class="list-title" data-i18n="foldersTitle">Pastas & Conteúdo</span>
         <span id="selection-count" class="badge">0</span>
       </div>
-
       <div id="folder-tree" class="file-list">
         <div class="placeholder-state">
           <div class="spinner"></div>
@@ -75,19 +70,23 @@
       </div>
     </main>
   </div>
-
   <footer class="footer">
     <button id="btn-download" class="action-btn" disabled>
       <span class="material-icons">download</span>
       <span id="btn-text" data-i18n="downloadSelected">Baixar Selecionados</span>
     </button>
-    
-    <div class="credits">
-      <span data-i18n="developedBy">Desenvolvido por</span>
-      <a href="#" id="author-link" title="LinkedIn">João Ávila</a>
+    <div class="footer-bottom">
+      <div class="lang-selector">
+        <button class="lang-btn" data-lang="pt_BR" title="Português">🇧🇷</button>
+        <span class="divider">|</span>
+        <button class="lang-btn" data-lang="en" title="English">🇺🇸</button>
+      </div>
+      <div class="credits">
+        <span data-i18n="developedBy">Desenvolvido por</span>
+        <a href="#" id="author-link" title="LinkedIn">João Ávila</a>
+      </div>
     </div>
   </footer>
-
   <div id="overlay-msg" class="overlay hidden">
     <div class="modal">
       <span class="material-icons modal-icon">info</span>
@@ -95,7 +94,6 @@
       <button class="modal-close" id="modal-close-btn">OK</button>
     </div>
   </div>
-
   <div id="overlay-loading" class="overlay hidden">
     <div class="loading-box">
       <div class="spinner large"></div>
@@ -106,14 +104,12 @@
       <p id="progress-details" class="progress-details"></p>
     </div>
   </div>
-
   <div id="login-state" class="full-screen-state hidden">
     <span class="material-icons state-icon">cloud_off</span>
     <h2 data-i18n="sessionErrorTitle">Sem Sessão</h2>
     <p data-i18n="sessionErrorDesc">Faça login para continuar.</p>
     <button id="btn-retry" class="action-btn secondary" data-i18n="tryAgain">Tentar Novamente</button>
   </div>
-
   <script src="jszip.min.js"></script>
   <script src="popup.js"></script>
 </body>
