@@ -1,12 +1,12 @@
 # SFMC Email & Template QuickSave
 
-> **Product Type:** Google Chrome Browser Extension (Software)
-> **License:** Open Source (MIT)
+> **Product Type:** Google Chrome Browser Extension (Software)<br>
+> **License:** Open Source (MIT)<br>
 > **Pricing:** Free to use, supported by user contributions.
 
 **SFMC Email & Template QuickSave** is a Google Chrome extension designed to simplify the workflow of Salesforce Marketing Cloud professionals. It allows you to browse, search, and download emails and templates directly from your Content Builder folders without the need for complex API setups or manual copy-pasting.
 
-The tool connects seamlessly with your active Marketing Cloud session, providing a clean and modern interface to export your assets as HTML files or ZIP archives instantly.
+The tool offers a clean and modern interface for instantly exporting your assets as HTML files or ZIP files.
 
 ## Key Features
 
