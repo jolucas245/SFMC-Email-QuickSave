@@ -53,6 +53,12 @@ This extension operates entirely within your browser. It does not store your pas
 * **downloads**: Required to save the HTML and ZIP files to your computer.
 * **host_permissions**: Necessary to communicate with the Salesforce Marketing Cloud endpoints to retrieve your content.
 
+## Support the Developer
+
+This extension is provided for free to the community. If it saves you time and you'd like to support its ongoing maintenance and development, consider supporting the project!
+
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buy.stripe.com/aFabJ15g50IdcZ33Rw1RC00)
+
 ## Credits
 
 **Developed by João Ávila**
