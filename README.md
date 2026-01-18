@@ -69,4 +69,4 @@ This extension is provided for free to the community. If it saves you time and y
 
 If you find this tool useful or have suggestions for improvements, feel free to reach out.
 
-[LinkedIn Profile](https://linkedin.com/in/jolucas240)
+[LinkedIn Profile](https://linkedin.com/in/jolucas245)
