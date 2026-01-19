@@ -57,11 +57,21 @@ This extension operates entirely within your browser. It does not store your pas
 * **downloads**: Required to save the HTML and ZIP files to your computer.
 * **host_permissions**: Necessary to communicate with the Salesforce Marketing Cloud endpoints to retrieve your content.
 
-## Support the Developer
+## Support the Project / Apoie o Projeto
 
-This extension is provided for free to the community. If it saves you time and you'd like to support its ongoing maintenance and development, consider supporting the project!
+This extension is free and open source. If it saves you time, you can support its maintenance.
+*Essa extensão é gratuita e open source. Se ela te ajuda, considere apoiar a manutenção.*
 
-[![Ko-fi](https://img.shields.io/badge/Ko--fi-F16061?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/jolucas245)
+### 🌍 International Users
+Support via Ko-fi (USD/EUR). Secure and standard for international developers.
+
+[![Ko-fi](https://img.shields.io/badge/Support%20on-Ko--fi-F16061?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/jolucas245)
+
+### 🇧🇷 Usuários do Brasil
+Apoio direto em Reais (BRL) via Stripe (Pix ou Cartão). Sem taxas internacionais.
+
+[![Apoiar em Reais](https://img.shields.io/badge/Apoiar-R$%20Reais-008cdd?style=for-the-badge&logo=stripe&logoColor=white)](https://buy.stripe.com/aFabJ15g50IdcZ33Rw1RC00)
+
 
 ## Credits
 
