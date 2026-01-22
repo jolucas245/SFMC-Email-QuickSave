@@ -1,8 +1,12 @@
 # SFMC Email & Template QuickSave
 
+> **Product Type:** Google Chrome Browser Extension (Software)<br>
+> **License:** Open Source (MIT)<br>
+> **Pricing:** Free to use, supported by user contributions.
+
 **SFMC Email & Template QuickSave** is a Google Chrome extension designed to simplify the workflow of Salesforce Marketing Cloud professionals. It allows you to browse, search, and download emails and templates directly from your Content Builder folders without the need for complex API setups or manual copy-pasting.
 
-The tool connects seamlessly with your active Marketing Cloud session, providing a clean and modern interface to export your assets as HTML files or ZIP archives instantly.
+The tool offers a clean and modern interface for instantly exporting your assets as HTML files or ZIP files.
 
 ## Key Features
 
@@ -16,7 +20,7 @@ The tool connects seamlessly with your active Marketing Cloud session, providing
 
 ## Installation
 
-Since this extension is currently in development mode, you can install it manually in your browser:
+To install this open-source extension manually via Developer Mode:
 
 1.  Download or clone this repository to your local machine.
 2.  Open Google Chrome and navigate to the extensions management page by typing `chrome://extensions` in the address bar.
@@ -52,6 +56,22 @@ This extension operates entirely within your browser. It does not store your pas
 * **storage**: Used to save your language preference locally.
 * **downloads**: Required to save the HTML and ZIP files to your computer.
 * **host_permissions**: Necessary to communicate with the Salesforce Marketing Cloud endpoints to retrieve your content.
+
+## Support the Project / Apoie o Projeto
+
+This extension is free and open source. If it saves you time, you can support its maintenance.
+*Essa extensão é gratuita e open source. Se ela te ajuda, considere apoiar a manutenção.*
+
+### 🌍 International Users
+Support via Ko-fi (USD/EUR). Secure and standard for international developers.
+
+[![Ko-fi](https://img.shields.io/badge/Support%20on-Ko--fi-F16061?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/jolucas245)
+
+### 🇧🇷 Usuários do Brasil
+Apoio direto em Reais (BRL) via Pix. Sem taxas internacionais.
+
+[![Apoiar em Reais](https://img.shields.io/badge/Apoiar-R$%20Reais-008cdd?style=for-the-badge&logo=stripe&logoColor=white)](https://livepix.gg/vaquinha/sfmc-quicksave)
+
 
 ## Credits
 
