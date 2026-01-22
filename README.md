@@ -68,9 +68,9 @@ Support via Ko-fi (USD/EUR). Secure and standard for international developers.
 [![Ko-fi](https://img.shields.io/badge/Support%20on-Ko--fi-F16061?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/jolucas245)
 
 ### 🇧🇷 Usuários do Brasil
-Apoio direto em Reais (BRL) via Stripe (Pix ou Cartão). Sem taxas internacionais.
+Apoio direto em Reais (BRL) via Pix. Sem taxas internacionais.
 
-[![Apoiar em Reais](https://img.shields.io/badge/Apoiar-R$%20Reais-008cdd?style=for-the-badge&logo=stripe&logoColor=white)](https://buy.stripe.com/aFabJ15g50IdcZ33Rw1RC00)
+[![Apoiar em Reais](https://img.shields.io/badge/Apoiar-R$%20Reais-008cdd?style=for-the-badge&logo=stripe&logoColor=white)](https://livepix.gg/vaquinha/sfmc-quicksave)
 
 
 ## Credits
