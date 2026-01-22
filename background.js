@@ -1,8 +1,3 @@
-// SFMC Email Downloader - Background Service Worker
-// Gerencia requisições à API do Marketing Cloud usando a sessão do navegador
-// Baseado na análise do SFMC Companion
-
-// Cache para o token de acesso
 let accessTokenCache = {
   token: null,
   expiresAt: 0,
@@ -10,30 +5,23 @@ let accessTokenCache = {
   businessUnitId: null
 };
 
-// Obter URL base do Marketing Cloud
 function getBaseUrl(stack) {
-  // Se stack é vazio ou 's1.', usar sem prefixo
   if (!stack || stack === 's1.' || stack === 's1' || stack === '') {
     return 'https://mc.exacttarget.com';
   }
-  // Remover ponto final se existir
   const cleanStack = stack.replace(/\.$/, '');
   return `https://mc.${cleanStack}.exacttarget.com`;
 }
 
-// Obter token de acesso da sessão ativa (método do SFMC Companion)
 async function getAccessToken(stack) {
   const now = Date.now();
   
-  // Verificar cache
   if (accessTokenCache.token && accessTokenCache.stack === stack && accessTokenCache.expiresAt > now) {
     return accessTokenCache;
   }
   
   try {
     const baseUrl = getBaseUrl(stack);
-    
-    // Endpoint usado pelo SFMC Companion para obter token
     const response = await fetch(`${baseUrl}/cloud/update-token.json`, {
       method: 'GET',
       credentials: 'include'
@@ -49,7 +37,6 @@ async function getAccessToken(stack) {
       throw new Error('Token não encontrado - sessão inválida');
     }
     
-    // Obter informações do usuário
     const userResponse = await fetch(`${baseUrl}/cloud/fuelapi/legacy/v1/beta/organization/user/@me`, {
       method: 'GET',
       credentials: 'include'
@@ -61,10 +48,9 @@ async function getAccessToken(stack) {
       businessUnitId = userData.businessUnitId;
     }
     
-    // Atualizar cache
     accessTokenCache = {
       token: data.accessToken,
-      expiresAt: now + (data.expiresIn * 1000) - 60000, // 1 minuto de margem
+      expiresAt: now + (data.expiresIn * 1000) - 60000,
       stack: stack,
       businessUnitId: businessUnitId
     };
@@ -76,7 +62,6 @@ async function getAccessToken(stack) {
   }
 }
 
-// Fazer requisição usando a sessão do navegador (sem token no header)
 async function makeSessionRequest(stack, endpoint, options = {}) {
   const baseUrl = getBaseUrl(stack);
   const url = baseUrl + endpoint;
@@ -117,7 +102,6 @@ async function makeSessionRequest(stack, endpoint, options = {}) {
   }
 }
 
-// Fazer requisição com paginação (método do SFMC Companion)
 async function fetchWithPagination(stack, endpoint, itemsKey = 'items', pageSize = 500) {
   const results = [];
   let page = 1;
@@ -132,7 +116,6 @@ async function fetchWithPagination(stack, endpoint, itemsKey = 'items', pageSize
     const items = response[itemsKey] || [];
     results.push(...items);
     
-    // Verificar se há mais páginas
     if (items.length < pageSize || items.length === 0) {
       hasMore = false;
     } else {
@@ -143,9 +126,7 @@ async function fetchWithPagination(stack, endpoint, itemsKey = 'items', pageSize
   return results;
 }
 
-// Listar categorias (pastas) do Content Builder
 async function listAllCategories(stack) {
-  // Usar endpoint interno do SFMC (fuelapi)
   return await fetchWithPagination(
     stack, 
     '/cloud/fuelapi/asset/v1/content/categories',
@@ -154,11 +135,9 @@ async function listAllCategories(stack) {
   );
 }
 
-// Listar assets de uma categoria específica
 async function listAssetsByCategory(stack, categoryId, assetTypes = ['htmlemail', 'templatebasedemail', 'htmlblock']) {
   const baseUrl = getBaseUrl(stack);
   
-  // Mapear tipos para IDs
   const typeIdMap = {
     'htmlemail': 208,
     'templatebasedemail': 207,
@@ -170,7 +149,6 @@ async function listAssetsByCategory(stack, categoryId, assetTypes = ['htmlemail'
     .map(type => typeIdMap[type.toLowerCase()])
     .filter(id => id !== undefined);
   
-  // Usar query POST como o SFMC Companion
   const query = {
     page: {
       page: 1,
@@ -205,7 +183,6 @@ async function listAssetsByCategory(stack, categoryId, assetTypes = ['htmlemail'
     });
     return response;
   } catch (error) {
-    // Fallback para GET simples
     console.log('Tentando método alternativo...');
     const items = await fetchWithPagination(
       stack,
@@ -217,19 +194,15 @@ async function listAssetsByCategory(stack, categoryId, assetTypes = ['htmlemail'
   }
 }
 
-// Obter conteúdo de um asset
 async function getAssetContent(stack, assetId) {
   return await makeSessionRequest(stack, `/cloud/fuelapi/asset/v1/content/assets/${assetId}`);
 }
 
-// Obter todas as pastas do sistema (método do SFMC Companion)
 async function getAllFolders(stack) {
   const allFolders = [];
   
-  // Primeiro obter pastas raiz
   const rootFolders = await makeSessionRequest(stack, '/cloud/fuelapi/legacy/v1/beta/folder/0/children');
   
-  // Para cada tipo de pasta raiz, obter todas as subpastas
   for (const folder of rootFolders.entry || []) {
     try {
       const typeFolders = await fetchWithPagination(
@@ -247,16 +220,13 @@ async function getAllFolders(stack) {
   return allFolders;
 }
 
-// Obter Data Extensions (método do SFMC Companion)
 async function getDataExtensions(stack) {
-  // Primeiro obter as pastas para encontrar a pasta "Data Extensions"
   const folders = await getAllFolders(stack);
   const deRootFolder = folders.find(f => f.parentId === 0 && f.name === 'Data Extensions');
   
   const allDEs = [];
   
   if (deRootFolder) {
-    // Obter DEs da pasta raiz
     const rootDEs = await fetchWithPagination(
       stack,
       `/cloud/fuelapi/internal/v1/customobjects/category/${deRootFolder.categoryId}?orderBy=name%20asc`,
@@ -266,7 +236,6 @@ async function getDataExtensions(stack) {
     allDEs.push(...rootDEs);
   }
   
-  // Buscar DEs adicionais por caractere (técnica do SFMC Companion)
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   const foundIds = new Set(allDEs.map(de => de.id));
   
@@ -293,7 +262,6 @@ async function getDataExtensions(stack) {
   return allDEs;
 }
 
-// Criar pasta de Data Extension
 async function createDEFolder(stack, folderName, parentCategoryId) {
   const payload = {
     name: folderName,
@@ -307,7 +275,6 @@ async function createDEFolder(stack, folderName, parentCategoryId) {
   });
 }
 
-// Criar Data Extension
 async function createDataExtension(stack, config) {
   const payload = {
     name: config.name,
@@ -339,7 +306,6 @@ async function createDataExtension(stack, config) {
   });
 }
 
-// Inserir linha em Data Extension
 async function insertDERow(stack, deKey, rowData) {
   return await makeSessionRequest(stack, `/cloud/fuelapi/data-internal/v1/customobjectdata/key/${deKey}/rows`, {
     method: 'POST',
@@ -347,7 +313,6 @@ async function insertDERow(stack, deKey, rowData) {
   });
 }
 
-// Listener para mensagens do popup e content script
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   const handleAsync = async () => {
     try {
@@ -414,10 +379,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   };
   
   handleAsync().then(sendResponse);
-  return true; // Indica que a resposta será assíncrona
+  return true;
 });
 
-// Limpar cache quando a extensão é instalada/atualizada
 chrome.runtime.onInstalled.addListener(() => {
   accessTokenCache = {
     token: null,

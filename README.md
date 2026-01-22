@@ -59,4 +59,4 @@ This extension operates entirely within your browser. It does not store your pas
 
 If you find this tool useful or have suggestions for improvements, feel free to reach out.
 
-[LinkedIn Profile](https://linkedin.com/in/jolucas240)
+[LinkedIn Profile](https://linkedin.com/in/jolucas245)

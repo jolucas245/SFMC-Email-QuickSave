@@ -22,5 +22,10 @@
   "success": { "message": "Success!" },
   "error": { "message": "Error" },
   "noContent": { "message": "No content selected." },
-  "developedBy": { "message": "Developed by" }
+  "developedBy": { "message": "Developed by" },
+  "buyCoffee": { "message": "Buy me a coffee? I'm just a solo Dev" },
+  "donateTitle": { "message": "Choose how to support" },
+  "donateBR": { "message": "I'm from Brazil 🇧🇷 (Pix)" },
+  "donateInt": { "message": "I'm International 🌎 (Ko-fi)" },
+  "donateClose": { "message": "Cancel" }
 }

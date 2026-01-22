@@ -1,7 +1,7 @@
 {
   "appName": { "message": "SFMC Email & Template QuickSave" },
   "appDesc": { "message": "Baixe emails e templates do Marketing Cloud rapidamente." },
-  "brandName": { "message": "SFMC Email &a& Template QuickSave" },
+  "brandName": { "message": "SFMC Email & Template QuickSave" },
   "checkingSession": { "message": "Verificando sessão..." },
   "actionsTitle": { "message": "AÇÕES" },
   "refresh": { "message": "Recarregar" },
@@ -22,5 +22,10 @@
   "success": { "message": "Sucesso!" },
   "error": { "message": "Erro" },
   "noContent": { "message": "Sem conteúdo selecionado." },
-  "developedBy": { "message": "Desenvolvido por" }
+  "developedBy": { "message": "Desenvolvido por" },
+  "buyCoffee": { "message": "Me pague um café? Sou apenas um Dev Mineiro" },
+  "donateTitle": { "message": "Escolha como apoiar" },
+  "donateBR": { "message": "Sou do Brasil 🇧🇷 (Pix)" },
+  "donateInt": { "message": "Sou Gringo 🌎 (Ko-fi)" },
+  "donateClose": { "message": "Cancelar" }
 }
