@@ -76,10 +76,16 @@
       <span id="btn-text" data-i18n="downloadSelected">Baixar Selecionados</span>
     </button>
     <div class="footer-bottom">
-      <div class="lang-selector">
-        <button class="lang-btn" data-lang="pt_BR" title="Português">🇧🇷</button>
-        <span class="divider">|</span>
-        <button class="lang-btn" data-lang="en" title="English">🇺🇸</button>
+      <div class="left-group">
+        <div class="lang-selector">
+          <button class="lang-btn" data-lang="pt_BR" title="Português">🇧🇷</button>
+          <span class="divider">|</span>
+          <button class="lang-btn" data-lang="en" title="English">🇺🇸</button>
+        </div>
+        <a href="#" id="coffee-link" class="coffee-btn" title="Buy me a coffee">
+          <span class="material-icons">local_cafe</span>
+          <span data-i18n="buyCoffee">Me pague um café? Sou apenas um Dev Mineiro</span>
+        </a>
       </div>
       <div class="credits">
         <span data-i18n="developedBy">Desenvolvido por</span>
@@ -87,6 +93,24 @@
       </div>
     </div>
   </footer>
+  <div id="donation-modal" class="overlay hidden">
+    <div class="modal donation-box">
+      <h3 class="modal-title" data-i18n="donateTitle">Escolha como apoiar</h3>
+      <div class="donation-options">
+        <button id="btn-donate-br" class="donate-btn br">
+          <span class="flag">🇧🇷</span>
+          <span class="label" data-i18n="donateBR">Sou do Brasil (Pix)</span>
+        </button>
+        <button id="btn-donate-int" class="donate-btn int">
+          <span class="flag">🌎</span>
+          <span class="label" data-i18n="donateInt">Sou Gringo (Card)</span>
+        </button>
+      </div>
+      <button class="modal-close-text" id="close-donation">
+        <span data-i18n="donateClose">Cancelar</span>
+      </button>
+    </div>
+  </div>
   <div id="overlay-msg" class="overlay hidden">
     <div class="modal">
       <span class="material-icons modal-icon">info</span>

@@ -21,7 +21,14 @@ const translations = {
     success: "Sucesso!",
     error: "Erro",
     noContent: "Sem conteúdo selecionado.",
-    developedBy: "Desenvolvido por"
+    developedBy: "Desenvolvido por",
+    buyCoffee: "Me pague um café? Sou apenas um Dev Mineiro",
+    donateTitle: "Escolha como apoiar",
+    donateBR: "Sou do Brasil 🇧🇷 (Pix)",
+    donateInt: "Sou Gringo 🌎 (Ko-fi)",
+    donateClose: "Cancelar",
+    sessionExpiredTitle: "Sessão Expirada",
+    sessionExpiredDesc: "Você não tem uma sessão ativa no SFMC. Por favor, faça o login.",
   },
   en: {
     brandName: "SFMC Email & Template QuickSave",
@@ -45,7 +52,14 @@ const translations = {
     success: "Success!",
     error: "Error",
     noContent: "No content selected.",
-    developedBy: "Developed by"
+    developedBy: "Developed by",
+    buyCoffee: "Buy me a coffee? I'm just a solo Dev",
+    donateTitle: "Choose how to support",
+    donateBR: "I'm from Brazil 🇧🇷 (Pix)",
+    donateInt: "I'm International 🌎 (Ko-fi)",
+    donateClose: "Cancel",
+    sessionExpiredTitle: "Session Expired",
+    sessionExpiredDesc: "You do not have an active session on SFMC. Please log in."
   }
 };
 let currentLang = localStorage.getItem('sfmc_lang') || 'pt_BR';
@@ -58,7 +72,7 @@ const state = {
   loadedCategories: new Set(),
   isLoading: false,
   statusKey: 'checkingSession',
-  statusExtra: '' 
+  statusExtra: ''
 };
 const elements = {
   statusStrip: null,
@@ -124,6 +138,7 @@ function initEventListeners() {
   document.getElementById('modal-close-btn').addEventListener('click', () => elements.overlayMsg.classList.add('hidden'));
   elements.btnDownload.addEventListener('click', downloadSelected);
   elements.selectAll.addEventListener('change', toggleSelectAll);
+
   const authorLink = document.getElementById('author-link');
   if (authorLink) {
     authorLink.addEventListener('click', (e) => {
@@ -131,6 +146,44 @@ function initEventListeners() {
       chrome.tabs.create({ url: 'https://linkedin.com/in/jolucas240' });
     });
   }
+
+  const coffeeLink = document.getElementById('coffee-link');
+  const donationModal = document.getElementById('donation-modal');
+  const closeDonation = document.getElementById('close-donation');
+  const btnDonateBR = document.getElementById('btn-donate-br');
+  const btnDonateInt = document.getElementById('btn-donate-int');
+
+  if (coffeeLink) {
+    coffeeLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      donationModal.classList.remove('hidden');
+    });
+  }
+  if (closeDonation) {
+    closeDonation.addEventListener('click', () => {
+      donationModal.classList.add('hidden');
+    });
+  }
+  if (donationModal) {
+    donationModal.addEventListener('click', (e) => {
+      if (e.target === donationModal) donationModal.classList.add('hidden');
+    });
+  }
+  if (btnDonateBR) {
+    btnDonateBR.addEventListener('click', () => {
+      const linkBR = 'https://livepix.gg/vaquinha/sfmc-quicksave';
+      chrome.tabs.create({ url: linkBR });
+      donationModal.classList.add('hidden');
+    });
+  }
+  if (btnDonateInt) {
+    btnDonateInt.addEventListener('click', () => {
+      const linkInt = 'https://ko-fi.com/jolucas245';
+      chrome.tabs.create({ url: linkInt });
+      donationModal.classList.add('hidden');
+    });
+  }
+
   document.querySelectorAll('.lang-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       setLanguage(e.target.closest('button').dataset.lang);
@@ -190,7 +243,7 @@ function updateStatus(type, key, extra = '') {
 }
 function refreshStatusText() {
   const text = getMsg(state.statusKey) + state.statusExtra;
-  if(elements.statusText) elements.statusText.textContent = text;
+  if (elements.statusText) elements.statusText.textContent = text;
 }
 function detectStackFromUrl(url) {
   if (!url) return null;
@@ -219,10 +272,10 @@ async function loadCategories() {
       buildCategoryTree();
       renderFolderTree();
     } else {
-      elements.folderTree.innerHTML = `<div style="padding:16px;text-align:center;color:red">${getMsg('error')}: ${response.error}</div>`;
+      handleApiError(new Error(response.error), elements.folderTree);
     }
   } catch (error) {
-    elements.folderTree.innerHTML = `<div style="padding:16px;text-align:center;color:red">${getMsg('error')}: ${error.message}</div>`;
+    handleApiError(error, elements.folderTree);
   }
 }
 function buildCategoryTree() {
@@ -327,10 +380,9 @@ async function loadAssetsForCategory(categoryId) {
       state.loadedCategories.add(categoryId);
       renderAssets(assetsContainer, assets);
     } else {
-      assetsContainer.innerHTML = `<div style="padding:8px;color:red;">${getMsg('error')}</div>`;
-    }
+      handleApiError(new Error(response.error), assetsContainer);    }
   } catch (error) {
-    assetsContainer.innerHTML = `<div style="padding:8px;color:red;">${getMsg('error')}</div>`;
+    handleApiError(error, assetsContainer);  
   }
 }
 function getSelectedAssetTypes() {
@@ -423,6 +475,15 @@ function toggleSelectAll() {
     toggleAssetSelection({ id: assetId }, isChecked);
   });
 }
+async function refreshCategories() {
+  state.categories = [];
+  state.categoryTree = {};
+  state.assets = {};
+  state.loadedCategories.clear();
+  state.selectedAssets.clear();
+  updateSelectionCount();
+  await loadCategories();
+}
 async function reloadCurrentFolders() {
   state.assets = {};
   state.loadedCategories.clear();
@@ -433,7 +494,7 @@ async function reloadCurrentFolders() {
   }
   state.selectedAssets.forEach(id => {
     const cb = document.querySelector(`.asset-checkbox[data-asset-id="${id}"]`);
-    if(cb) {
+    if (cb) {
       cb.checked = true;
       cb.closest('.asset-row').classList.add('selected');
     }
@@ -448,12 +509,12 @@ function expandAllFolders() {
     const assetsContainer = folder.querySelector('.assets-container');
     const catId = parseInt(assetsContainer?.dataset?.categoryId);
     if (children) {
-        children.classList.add('expanded');
-        if (toggle) toggle.classList.add('rotated');
-        if (icon) icon.textContent = 'folder_open';
-        if (catId && !state.loadedCategories.has(catId)) {
-            loadAssetsForCategory(catId);
-        }
+      children.classList.add('expanded');
+      if (toggle) toggle.classList.add('rotated');
+      if (icon) icon.textContent = 'folder_open';
+      if (catId && !state.loadedCategories.has(catId)) {
+        loadAssetsForCategory(catId);
+      }
     }
   });
 }
@@ -464,9 +525,9 @@ function collapseAllFolders() {
     const toggle = folder.querySelector('.tree-toggle');
     const icon = folder.querySelector('.tree-icon');
     if (children) {
-        children.classList.remove('expanded');
-        if (toggle) toggle.classList.remove('rotated');
-        if (icon) icon.textContent = 'folder';
+      children.classList.remove('expanded');
+      if (toggle) toggle.classList.remove('rotated');
+      if (icon) icon.textContent = 'folder';
     }
   });
 }
@@ -483,7 +544,7 @@ async function downloadSelected() {
   try {
     const files = [];
     for (let i = 0; i < total; i++) {
-      updateProgress(i, total, `${getMsg('processing')} ${i+1}/${total}`);
+      updateProgress(i, total, `${getMsg('processing')} ${i + 1}/${total}`);
       const assetId = assetIds[i];
       const response = await sendMessage({
         action: 'getAssetContent',
@@ -573,4 +634,26 @@ function updateProgress(current, total, text) {
 function showMessage(text) {
   elements.overlayMsg.querySelector('.modal-text').textContent = text;
   elements.overlayMsg.classList.remove('hidden');
+}
+function handleApiError(error, containerElement) {
+  if (error.message.includes('401') || error.message.includes('Not Authenticated')) {
+    const titleEl = document.querySelector('#login-state h2');
+    const descEl = document.querySelector('#login-state p');
+
+    if (titleEl) titleEl.textContent = getMsg('sessionExpiredTitle');
+    if (descEl) descEl.textContent = getMsg('sessionExpiredDesc');
+
+    showLoginRequired();
+    updateStatus('error', 'sessionLost');
+    return;
+  }
+
+  if (containerElement) {
+    containerElement.innerHTML = `
+      <div style="padding:20px; text-align:center; color: var(--error);">
+        <span class="material-icons" style="font-size: 24px; margin-bottom: 8px;">error_outline</span>
+        <p style="margin:0; font-weight:500;">${getMsg('error')}</p>
+        <p style="margin-top:4px; font-size:11px; opacity:0.8;">${error.message}</p>
+      </div>`;
+  }
 }
