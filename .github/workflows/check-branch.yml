@@ -1,0 +1,15 @@
+name: Block Feature to Master
+on:
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  check-source-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check source branch
+        if: github.head_ref != 'dev'
+        run: |
+          echo "ERRO: PRs para master devem vir APENAS da branch 'dev'."
+          echo "A branch atual é: ${{ github.head_ref }}"
+          exit 1
