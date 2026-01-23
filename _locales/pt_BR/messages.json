@@ -8,6 +8,9 @@
   "expand": { "message": "Expandir" },
   "collapse": { "message": "Recolher" },
   "filtersTitle": { "message": "FILTROS" },
+  "optionsTitle": { "message": "OPÇÕES" },
+  "optionResolveBlocks": { "message": "Resolver Blocks" },
+  "optionIncludeImages": { "message": "Incluir Imagens" },
   "foldersTitle": { "message": "Pastas & Conteúdo" },
   "loading": { "message": "Carregando..." },
   "downloadSelected": { "message": "Baixar Selecionados" },
@@ -19,6 +22,8 @@
   "emptyFolder": { "message": "Vazia" },
   "downloading": { "message": "Baixando..." },
   "processing": { "message": "Processando" },
+  "resolvingBlocks": { "message": "Resolvendo Content Blocks..." },
+  "downloadingImages": { "message": "Baixando imagens..." },
   "success": { "message": "Sucesso!" },
   "error": { "message": "Erro" },
   "noContent": { "message": "Sem conteúdo selecionado." },
@@ -27,5 +32,8 @@
   "donateTitle": { "message": "Escolha como apoiar" },
   "donateBR": { "message": "Sou do Brasil 🇧🇷 (Pix)" },
   "donateInt": { "message": "Sou Gringo 🌎 (Ko-fi)" },
-  "donateClose": { "message": "Cancelar" }
+  "donateClose": { "message": "Cancelar" },
+  "sessionExpiredTitle": { "message": "Sessão Expirada" },
+  "sessionExpiredDesc": { "message": "Você não tem uma sessão ativa no SFMC. Por favor, faça o login." },
+  "imagesIncluded": { "message": "imagens incluídas" }
 }

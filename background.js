@@ -198,6 +198,241 @@ async function getAssetContent(stack, assetId) {
   return await makeSessionRequest(stack, `/cloud/fuelapi/asset/v1/content/assets/${assetId}`);
 }
 
+async function getAssetById(stack, assetId) {
+  return await makeSessionRequest(stack, `/cloud/fuelapi/asset/v1/content/assets/${assetId}`);
+}
+
+async function getAssetByCustomerKey(stack, customerKey) {
+  const query = {
+    page: { page: 1, pageSize: 1 },
+    query: {
+      property: 'customerKey',
+      simpleOperator: 'equal',
+      value: customerKey
+    }
+  };
+  
+  const response = await makeSessionRequest(stack, '/cloud/fuelapi/asset/v1/content/assets/query', {
+    method: 'POST',
+    body: JSON.stringify(query)
+  });
+  
+  if (response.items && response.items.length > 0) {
+    return await getAssetById(stack, response.items[0].id);
+  }
+  return null;
+}
+
+function extractContentBlockReferences(html) {
+  const references = [];
+  
+  const keyPattern = /%%=ContentBlockByKey\s*\(\s*["']([^"']+)["']\s*\)=%%/gi;
+  let match;
+  while ((match = keyPattern.exec(html)) !== null) {
+    references.push({ type: 'key', value: match[1], fullMatch: match[0] });
+  }
+  
+  const idPattern = /%%=ContentBlockById\s*\(\s*["']?(\d+)["']?\s*\)=%%/gi;
+  while ((match = idPattern.exec(html)) !== null) {
+    references.push({ type: 'id', value: match[1], fullMatch: match[0] });
+  }
+  
+  const namePattern = /%%=ContentBlockByName\s*\(\s*["']([^"']+)["']\s*\)=%%/gi;
+  while ((match = namePattern.exec(html)) !== null) {
+    references.push({ type: 'name', value: match[1], fullMatch: match[0] });
+  }
+  
+  return references;
+}
+
+async function resolveContentBlock(stack, reference) {
+  try {
+    let asset = null;
+    
+    if (reference.type === 'id') {
+      asset = await getAssetById(stack, reference.value);
+    } else if (reference.type === 'key') {
+      asset = await getAssetByCustomerKey(stack, reference.value);
+    } else if (reference.type === 'name') {
+      const query = {
+        page: { page: 1, pageSize: 1 },
+        query: {
+          property: 'name',
+          simpleOperator: 'equal',
+          value: reference.value
+        }
+      };
+      const response = await makeSessionRequest(stack, '/cloud/fuelapi/asset/v1/content/assets/query', {
+        method: 'POST',
+        body: JSON.stringify(query)
+      });
+      if (response.items && response.items.length > 0) {
+        asset = await getAssetById(stack, response.items[0].id);
+      }
+    }
+    
+    if (asset) {
+      return asset.views?.html?.content || asset.content || '';
+    }
+    return '';
+  } catch (error) {
+    console.error(`Erro ao resolver content block ${reference.type}:${reference.value}:`, error);
+    return `<!-- Content Block não encontrado: ${reference.value} -->`;
+  }
+}
+
+async function compileAssetContent(stack, html, maxDepth = 5) {
+  if (maxDepth <= 0) return html;
+  
+  let compiledHtml = html;
+  const references = extractContentBlockReferences(compiledHtml);
+  
+  if (references.length === 0) {
+    return compiledHtml;
+  }
+  
+  for (const ref of references) {
+    const blockContent = await resolveContentBlock(stack, ref);
+    compiledHtml = compiledHtml.replace(ref.fullMatch, blockContent);
+  }
+  
+  return await compileAssetContent(stack, compiledHtml, maxDepth - 1);
+}
+
+function compileAssetSlots(asset) {
+  let html = asset.views?.html?.content || asset.content || '';
+  
+  if (asset.views?.html?.slots) {
+    const slots = asset.views.html.slots;
+    for (const [slotKey, slotData] of Object.entries(slots)) {
+      if (slotData.blocks) {
+        let slotContent = '';
+        for (const block of slotData.blocks) {
+          if (block.content) {
+            slotContent += block.content;
+          } else if (block.superContent) {
+            slotContent += block.superContent;
+          }
+        }
+        const slotPlaceholder = new RegExp(`<div[^>]*data-slot=["']${slotKey}["'][^>]*>.*?</div>`, 'gis');
+        html = html.replace(slotPlaceholder, slotContent);
+      }
+    }
+  }
+  
+  if (asset.blocks) {
+    for (const block of asset.blocks) {
+      if (block.content) {
+        const blockPlaceholder = new RegExp(`%%=ContentBlockByKey\\s*\\(\\s*["']${block.customerKey}["']\\s*\\)=%%`, 'gi');
+        html = html.replace(blockPlaceholder, block.content);
+      }
+    }
+  }
+  
+  return html;
+}
+
+function extractImageUrls(html) {
+  const urls = new Set();
+  
+  const srcPattern = /<img[^>]+src=["']([^"']+)["']/gi;
+  let match;
+  while ((match = srcPattern.exec(html)) !== null) {
+    if (match[1] && !match[1].startsWith('data:')) {
+      urls.add(match[1]);
+    }
+  }
+  
+  const bgPattern = /background(?:-image)?:\s*url\s*\(\s*["']?([^"')]+)["']?\s*\)/gi;
+  while ((match = bgPattern.exec(html)) !== null) {
+    if (match[1] && !match[1].startsWith('data:')) {
+      urls.add(match[1]);
+    }
+  }
+  
+  const bgShortPattern = /background:\s*[^;]*url\s*\(\s*["']?([^"')]+)["']?\s*\)/gi;
+  while ((match = bgShortPattern.exec(html)) !== null) {
+    if (match[1] && !match[1].startsWith('data:')) {
+      urls.add(match[1]);
+    }
+  }
+  
+  return Array.from(urls);
+}
+
+async function downloadImage(url) {
+  try {
+    const response = await fetch(url, {
+      credentials: 'include',
+      mode: 'cors'
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    
+    const blob = await response.blob();
+    const arrayBuffer = await blob.arrayBuffer();
+    
+    let filename = url.split('/').pop().split('?')[0];
+    if (!filename || filename.length > 100) {
+      filename = 'image_' + Date.now();
+    }
+    
+    const contentType = response.headers.get('content-type') || '';
+    if (!filename.includes('.')) {
+      if (contentType.includes('png')) filename += '.png';
+      else if (contentType.includes('gif')) filename += '.gif';
+      else if (contentType.includes('webp')) filename += '.webp';
+      else filename += '.jpg';
+    }
+    
+    return {
+      filename: filename,
+      data: arrayBuffer,
+      contentType: contentType,
+      originalUrl: url
+    };
+  } catch (error) {
+    console.error(`Erro ao baixar imagem ${url}:`, error);
+    return null;
+  }
+}
+
+async function processAssetComplete(stack, assetId, options = {}) {
+  const { resolveBlocks = true, includeImages = false } = options;
+  
+  const asset = await getAssetContent(stack, assetId);
+  
+  let html = asset.views?.html?.content || asset.content || '';
+  
+  html = compileAssetSlots(asset);
+  
+  if (resolveBlocks) {
+    html = await compileAssetContent(stack, html, 5);
+  }
+  
+  const result = {
+    name: asset.name,
+    html: html,
+    images: []
+  };
+  
+  if (includeImages) {
+    const imageUrls = extractImageUrls(html);
+    for (const url of imageUrls) {
+      const imageData = await downloadImage(url);
+      if (imageData) {
+        result.images.push(imageData);
+        html = html.split(url).join(`images/${imageData.filename}`);
+      }
+    }
+    result.html = html;
+  }
+  
+  return result;
+}
+
 async function getAllFolders(stack) {
   const allFolders = [];
   
@@ -341,6 +576,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           const asset = await getAssetContent(request.stack, request.assetId);
           return { success: true, data: asset };
           
+        case 'getAssetComplete':
+          const completeAsset = await processAssetComplete(
+            request.stack, 
+            request.assetId, 
+            {
+              resolveBlocks: request.resolveBlocks !== false,
+              includeImages: request.includeImages === true
+            }
+          );
+          return { success: true, data: completeAsset };
+          
         case 'getFolders':
           const folders = await getAllFolders(request.stack);
           return { success: true, data: folders };
@@ -389,7 +635,7 @@ chrome.runtime.onInstalled.addListener(() => {
     stack: null,
     businessUnitId: null
   };
-  console.log('SFMC Email Downloader instalado/atualizado');
+  console.log('SFMC QuickSave instalado/atualizado');
 });
 
-console.log('SFMC Email Downloader - Background script carregado');
+console.log('SFMC QuickSave - Background script carregado');

@@ -7,6 +7,9 @@ const translations = {
     expand: "Expandir",
     collapse: "Recolher",
     filtersTitle: "FILTROS",
+    optionsTitle: "OPÇÕES",
+    optionResolveBlocks: "Resolver Blocks",
+    optionIncludeImages: "Incluir Imagens",
     foldersTitle: "Pastas & Conteúdo",
     loading: "Carregando...",
     downloadSelected: "Baixar Selecionados",
@@ -18,6 +21,8 @@ const translations = {
     emptyFolder: "Vazia",
     downloading: "Baixando...",
     processing: "Processando",
+    resolvingBlocks: "Resolvendo Content Blocks...",
+    downloadingImages: "Baixando imagens...",
     success: "Sucesso!",
     error: "Erro",
     noContent: "Sem conteúdo selecionado.",
@@ -29,6 +34,7 @@ const translations = {
     donateClose: "Cancelar",
     sessionExpiredTitle: "Sessão Expirada",
     sessionExpiredDesc: "Você não tem uma sessão ativa no SFMC. Por favor, faça o login.",
+    imagesIncluded: "imagens incluídas"
   },
   en: {
     brandName: "SFMC Email & Template QuickSave",
@@ -38,6 +44,9 @@ const translations = {
     expand: "Expand",
     collapse: "Collapse",
     filtersTitle: "FILTERS",
+    optionsTitle: "OPTIONS",
+    optionResolveBlocks: "Resolve Blocks",
+    optionIncludeImages: "Include Images",
     foldersTitle: "Folders & Content",
     loading: "Loading...",
     downloadSelected: "Download Selected",
@@ -49,6 +58,8 @@ const translations = {
     emptyFolder: "Empty",
     downloading: "Downloading...",
     processing: "Processing",
+    resolvingBlocks: "Resolving Content Blocks...",
+    downloadingImages: "Downloading images...",
     success: "Success!",
     error: "Error",
     noContent: "No content selected.",
@@ -59,10 +70,13 @@ const translations = {
     donateInt: "I'm International 🌎 (Ko-fi)",
     donateClose: "Cancel",
     sessionExpiredTitle: "Session Expired",
-    sessionExpiredDesc: "You do not have an active session on SFMC. Please log in."
+    sessionExpiredDesc: "You do not have an active session on SFMC. Please log in.",
+    imagesIncluded: "images included"
   }
 };
+
 let currentLang = localStorage.getItem('sfmc_lang') || 'pt_BR';
+
 const state = {
   stack: null,
   categories: [],
@@ -74,6 +88,7 @@ const state = {
   statusKey: 'checkingSession',
   statusExtra: ''
 };
+
 const elements = {
   statusStrip: null,
   statusText: null,
@@ -86,14 +101,18 @@ const elements = {
   selectionCount: null,
   overlayLoading: null,
   overlayMsg: null,
-  filters: {}
+  filters: {},
+  options: {}
 };
+
 document.addEventListener('DOMContentLoaded', async () => {
   initElements();
+  initResizer();
   setLanguage(currentLang);
   initEventListeners();
   await checkSession();
 });
+
 function initElements() {
   elements.statusStrip = document.getElementById('status-strip');
   elements.statusText = document.getElementById('status-text');
@@ -111,7 +130,12 @@ function initElements() {
     template: document.getElementById('filter-templatebasedemail'),
     block: document.getElementById('filter-htmlblock')
   };
+  elements.options = {
+    resolveBlocks: document.getElementById('option-resolve-blocks'),
+    includeImages: document.getElementById('option-include-images')
+  };
 }
+
 function setLanguage(lang) {
   if (!translations[lang]) return;
   currentLang = lang;
@@ -127,9 +151,11 @@ function setLanguage(lang) {
   refreshStatusText();
   updateSelectionCount();
 }
+
 function getMsg(key) {
   return translations[currentLang][key] || key;
 }
+
 function initEventListeners() {
   document.getElementById('btn-refresh').addEventListener('click', fullReload);
   document.getElementById('btn-expand-all').addEventListener('click', expandAllFolders);
@@ -189,10 +215,12 @@ function initEventListeners() {
       setLanguage(e.target.closest('button').dataset.lang);
     });
   });
+  
   Object.values(elements.filters).forEach(filter => {
     filter.addEventListener('change', reloadCurrentFolders);
   });
 }
+
 async function fullReload() {
   state.categories = [];
   state.categoryTree = {};
@@ -207,6 +235,38 @@ async function fullReload() {
     </div>`;
   await checkSession();
 }
+
+function initResizer() {
+  const sidebar = document.querySelector('.sidebar');
+  const resizer = document.getElementById('resizer');
+  
+  let isResizing = false;
+  
+  resizer.addEventListener('mousedown', (e) => {
+    isResizing = true;
+    resizer.classList.add('resizing');
+    document.body.style.cursor = 'col-resize';
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!isResizing) return;
+
+    const newWidth = e.clientX;
+
+    if (newWidth > 50 && newWidth < 500) {
+      sidebar.style.width = `${newWidth}px`;
+    }
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (isResizing) {
+      isResizing = false;
+      resizer.classList.remove('resizing');
+      document.body.style.cursor = 'default';
+    }
+  });
+}
+
 async function checkSession() {
   updateStatus('warning', 'checkingSession');
   try {
@@ -235,16 +295,19 @@ async function checkSession() {
     updateStatus('error', 'error');
   }
 }
+
 function updateStatus(type, key, extra = '') {
   state.statusKey = key;
   state.statusExtra = extra;
   elements.statusStrip.className = `status-strip ${type}`;
   refreshStatusText();
 }
+
 function refreshStatusText() {
   const text = getMsg(state.statusKey) + state.statusExtra;
   if (elements.statusText) elements.statusText.textContent = text;
 }
+
 function detectStackFromUrl(url) {
   if (!url) return null;
   let match = url.match(/mc\.([^.]+)\.exacttarget\.com/);
@@ -256,6 +319,7 @@ function detectStackFromUrl(url) {
   }
   return null;
 }
+
 async function loadCategories() {
   elements.folderTree.innerHTML = `
     <div class="placeholder-state">
@@ -278,6 +342,7 @@ async function loadCategories() {
     handleApiError(error, elements.folderTree);
   }
 }
+
 function buildCategoryTree() {
   state.categoryTree = {};
   const categoryMap = {};
@@ -299,6 +364,7 @@ function buildCategoryTree() {
   };
   Object.values(state.categoryTree).forEach(sortChildren);
 }
+
 function renderFolderTree() {
   elements.folderTree.innerHTML = '';
   const roots = Object.values(state.categoryTree).sort((a, b) => a.name.localeCompare(b.name));
@@ -310,6 +376,7 @@ function renderFolderTree() {
     elements.folderTree.appendChild(createFolderElement(category));
   });
 }
+
 function createFolderElement(category) {
   const container = document.createElement('div');
   container.className = 'tree-node';
@@ -340,6 +407,7 @@ function createFolderElement(category) {
   });
   return container;
 }
+
 async function toggleFolder(row, category, childrenContainer) {
   const toggle = row.querySelector('.tree-toggle');
   const icon = row.querySelector('.tree-icon');
@@ -357,6 +425,7 @@ async function toggleFolder(row, category, childrenContainer) {
     }
   }
 }
+
 async function loadAssetsForCategory(categoryId) {
   const assetsContainer = document.querySelector(`.assets-container[data-category-id="${categoryId}"]`);
   if (!assetsContainer) return;
@@ -380,11 +449,13 @@ async function loadAssetsForCategory(categoryId) {
       state.loadedCategories.add(categoryId);
       renderAssets(assetsContainer, assets);
     } else {
-      handleApiError(new Error(response.error), assetsContainer);    }
+      handleApiError(new Error(response.error), assetsContainer);
+    }
   } catch (error) {
-    handleApiError(error, assetsContainer);  
+    handleApiError(error, assetsContainer);
   }
 }
+
 function getSelectedAssetTypes() {
   const types = [];
   if (elements.filters.email.checked) types.push('htmlemail');
@@ -392,6 +463,7 @@ function getSelectedAssetTypes() {
   if (elements.filters.block.checked) types.push('htmlblock');
   return types;
 }
+
 function renderAssets(container, assets) {
   container.innerHTML = '';
   if (assets.length === 0) {
@@ -402,6 +474,7 @@ function renderAssets(container, assets) {
     container.appendChild(createAssetElement(asset));
   });
 }
+
 function createAssetElement(asset) {
   const row = document.createElement('div');
   row.className = 'asset-row';
@@ -442,6 +515,7 @@ function createAssetElement(asset) {
   });
   return row;
 }
+
 function toggleAssetSelection(asset, isSelected) {
   if (isSelected) {
     state.selectedAssets.add(asset.id);
@@ -457,6 +531,7 @@ function toggleAssetSelection(asset, isSelected) {
   }
   updateSelectionCount();
 }
+
 function updateSelectionCount() {
   const count = state.selectedAssets.size;
   elements.selectionCount.textContent = count;
@@ -466,6 +541,7 @@ function updateSelectionCount() {
   elements.btnDownload.disabled = count === 0;
   elements.selectAll.checked = count > 0;
 }
+
 function toggleSelectAll() {
   const isChecked = elements.selectAll.checked;
   const checkboxes = document.querySelectorAll('.asset-checkbox');
@@ -475,6 +551,7 @@ function toggleSelectAll() {
     toggleAssetSelection({ id: assetId }, isChecked);
   });
 }
+
 async function refreshCategories() {
   state.categories = [];
   state.categoryTree = {};
@@ -484,6 +561,7 @@ async function refreshCategories() {
   updateSelectionCount();
   await loadCategories();
 }
+
 async function reloadCurrentFolders() {
   state.assets = {};
   state.loadedCategories.clear();
@@ -500,6 +578,7 @@ async function reloadCurrentFolders() {
     }
   });
 }
+
 function expandAllFolders() {
   const folders = document.querySelectorAll('.tree-node');
   folders.forEach(folder => {
@@ -518,6 +597,7 @@ function expandAllFolders() {
     }
   });
 }
+
 function collapseAllFolders() {
   const folders = document.querySelectorAll('.tree-node');
   folders.forEach(folder => {
@@ -531,44 +611,73 @@ function collapseAllFolders() {
     }
   });
 }
+
 async function downloadSelected() {
   if (typeof JSZip === 'undefined') {
     showMessage(`${getMsg('error')}: jszip.min.js not found`);
     return;
   }
   if (state.selectedAssets.size === 0) return;
+  
   const assetIds = Array.from(state.selectedAssets);
   const total = assetIds.length;
+  const resolveBlocks = elements.options.resolveBlocks?.checked ?? true;
+  const includeImages = elements.options.includeImages?.checked ?? false;
+  
   showLoading(getMsg('downloading'));
   updateProgress(0, total);
+  
   try {
     const files = [];
+    const allImages = [];
+    
     for (let i = 0; i < total; i++) {
-      updateProgress(i, total, `${getMsg('processing')} ${i + 1}/${total}`);
+      let statusText = `${getMsg('processing')} ${i + 1}/${total}`;
+      if (resolveBlocks) {
+        statusText += ` - ${getMsg('resolvingBlocks')}`;
+      }
+      updateProgress(i, total, statusText);
+      
       const assetId = assetIds[i];
+      
       const response = await sendMessage({
-        action: 'getAssetContent',
+        action: 'getAssetComplete',
         stack: state.stack,
-        assetId: assetId
+        assetId: assetId,
+        resolveBlocks: resolveBlocks,
+        includeImages: includeImages
       });
-      if (response.success) {
-        const asset = response.data;
-        let content = asset.views?.html?.content || asset.content || asset.views?.preheader?.content;
-        if (content) {
+      
+      if (response.success && response.data) {
+        const assetData = response.data;
+        
+        if (assetData.html) {
           files.push({
-            name: sanitizeFileName(asset.name) + '.html',
-            content: content
+            name: sanitizeFileName(assetData.name) + '.html',
+            content: assetData.html
           });
+        }
+        
+        if (assetData.images && assetData.images.length > 0) {
+          for (const img of assetData.images) {
+            allImages.push(img);
+          }
         }
       }
     }
+    
     if (files.length > 0) {
-      if (files.length === 1) {
+      if (files.length === 1 && allImages.length === 0) {
         downloadSingleFile(files[0]);
       } else {
-        await downloadAsZip(files);
+        await downloadAsZip(files, allImages);
       }
-      showMessage(getMsg('success'));
+      
+      let successMsg = getMsg('success');
+      if (allImages.length > 0) {
+        successMsg += ` (${allImages.length} ${getMsg('imagesIncluded')})`;
+      }
+      showMessage(successMsg);
     } else {
       showMessage(getMsg('noContent'));
     }
@@ -578,6 +687,7 @@ async function downloadSelected() {
     hideLoading();
   }
 }
+
 async function downloadSingleFile(file) {
   const blob = new Blob([file.content], { type: 'text/html' });
   const url = URL.createObjectURL(blob);
@@ -586,9 +696,21 @@ async function downloadSingleFile(file) {
     filename: file.name
   });
 }
-async function downloadAsZip(files) {
+
+async function downloadAsZip(files, images = []) {
   const zip = new JSZip();
+  
   files.forEach(f => zip.file(f.name, f.content));
+  
+  if (images.length > 0) {
+    const imgFolder = zip.folder('images');
+    for (const img of images) {
+      if (img.data && img.filename) {
+        imgFolder.file(img.filename, img.data);
+      }
+    }
+  }
+  
   const blob = await zip.generateAsync({ type: 'blob' });
   const url = URL.createObjectURL(blob);
   const timestamp = new Date().toISOString().slice(0, 10);
@@ -597,9 +719,11 @@ async function downloadAsZip(files) {
     filename: `sfmc-assets-${timestamp}.zip`
   });
 }
+
 function sanitizeFileName(name) {
   return name.replace(/[<>:"/\\|?*]/g, '_').trim().substring(0, 50);
 }
+
 function sendMessage(message) {
   return new Promise((resolve, reject) => {
     chrome.runtime.sendMessage(message, response => {
@@ -611,30 +735,37 @@ function sendMessage(message) {
     });
   });
 }
+
 function showLoginRequired() {
   elements.appLayout.classList.add('hidden');
   elements.loginState.classList.remove('hidden');
 }
+
 function showMainContent() {
   elements.appLayout.classList.remove('hidden');
   elements.loginState.classList.add('hidden');
 }
+
 function showLoading(text) {
   document.getElementById('loading-text').textContent = text;
   elements.overlayLoading.classList.remove('hidden');
 }
+
 function hideLoading() {
   elements.overlayLoading.classList.add('hidden');
 }
+
 function updateProgress(current, total, text) {
   const percentage = Math.round((current / total) * 100);
   document.getElementById('progress-fill').style.width = percentage + '%';
   if (text) document.getElementById('progress-details').textContent = text;
 }
+
 function showMessage(text) {
   elements.overlayMsg.querySelector('.modal-text').textContent = text;
   elements.overlayMsg.classList.remove('hidden');
 }
+
 function handleApiError(error, containerElement) {
   if (error.message.includes('401') || error.message.includes('Not Authenticated')) {
     const titleEl = document.querySelector('#login-state h2');
