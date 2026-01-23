@@ -105,6 +105,8 @@ const elements = {
   options: {}
 };
 
+let searchTimeout = null;
+
 document.addEventListener('DOMContentLoaded', async () => {
   initElements();
   initResizer();
@@ -125,6 +127,8 @@ function initElements() {
   elements.selectionCount = document.getElementById('selection-count');
   elements.overlayLoading = document.getElementById('overlay-loading');
   elements.overlayMsg = document.getElementById('overlay-msg');
+  elements.searchInput = document.getElementById('search-input');
+  elements.clearSearch = document.getElementById('clear-search');
   elements.filters = {
     email: document.getElementById('filter-htmlemail'),
     template: document.getElementById('filter-templatebasedemail'),
@@ -162,6 +166,8 @@ function initEventListeners() {
   document.getElementById('btn-collapse-all').addEventListener('click', collapseAllFolders);
   document.getElementById('btn-retry').addEventListener('click', checkSession);
   document.getElementById('modal-close-btn').addEventListener('click', () => elements.overlayMsg.classList.add('hidden'));
+  elements.searchInput.addEventListener('input', handleSearchInput);
+  elements.clearSearch.addEventListener('click', clearSearch);
   elements.btnDownload.addEventListener('click', downloadSelected);
   elements.selectAll.addEventListener('change', toggleSelectAll);
 
@@ -219,6 +225,94 @@ function initEventListeners() {
   Object.values(elements.filters).forEach(filter => {
     filter.addEventListener('change', reloadCurrentFolders);
   });
+}
+
+function handleSearchInput(e) {
+  const term = e.target.value.trim();
+  
+  elements.clearSearch.classList.toggle('hidden', term.length === 0);
+  
+  if (searchTimeout) clearTimeout(searchTimeout);
+
+  if (term.length < 3) {
+    if (term.length === 0) renderFolderTree();
+    return;
+  }
+
+  searchTimeout = setTimeout(() => performSearch(term), 500);
+}
+
+async function performSearch(term) {
+  elements.folderTree.innerHTML = `
+    <div class="placeholder-state">
+      <div class="spinner"></div>
+      <p>Buscando por "${term}"...</p>
+    </div>`;
+
+  try {
+    const matchingFolders = state.categories.filter(cat => 
+      cat.name.toLowerCase().includes(term.toLowerCase())
+    );
+
+    const response = await sendMessage({
+      action: 'searchAssets',
+      stack: state.stack,
+      term: term
+    });
+
+    const matchingAssets = response.success && response.data.items ? response.data.items : [];
+
+    renderSearchResults(term, matchingFolders, matchingAssets);
+
+  } catch (error) {
+    console.error(error);
+    elements.folderTree.innerHTML = `<div style="padding:16px;color:red">Erro na busca.</div>`;
+  }
+}
+
+function renderSearchResults(term, folders, assets) {
+  elements.folderTree.innerHTML = '';
+  
+  if (folders.length === 0 && assets.length === 0) {
+    elements.folderTree.innerHTML = `<div style="padding:16px;text-align:center">Nenhum resultado para "${term}"</div>`;
+    return;
+  }
+
+  if (folders.length > 0) {
+    const folderHeader = document.createElement('div');
+    folderHeader.className = 'sidebar-label';
+    folderHeader.style.padding = '8px';
+    folderHeader.textContent = `PASTAS (${folders.length})`;
+    elements.folderTree.appendChild(folderHeader);
+
+    folders.forEach(cat => {
+      const folderEl = createFolderElement({ ...cat, children: [] });
+      const toggle = folderEl.querySelector('.tree-toggle');
+      if(toggle) toggle.style.visibility = 'hidden';
+      elements.folderTree.appendChild(folderEl);
+    });
+  }
+
+  if (assets.length > 0) {
+    const assetHeader = document.createElement('div');
+    assetHeader.className = 'sidebar-label';
+    assetHeader.style.padding = '8px 8px 0 8px';
+    assetHeader.style.marginTop = '12px';
+    assetHeader.textContent = `CONTEÚDO (${assets.length})`;
+    elements.folderTree.appendChild(assetHeader);
+
+    assets.forEach(asset => {
+      const assetEl = createAssetElement(asset);
+      assetEl.style.marginLeft = '0';
+      elements.folderTree.appendChild(assetEl);
+    });
+  }
+}
+
+function clearSearch() {
+  elements.searchInput.value = '';
+  elements.clearSearch.classList.add('hidden');
+  renderFolderTree();
 }
 
 async function fullReload() {
