@@ -287,8 +287,6 @@ function renderSearchResults(term, folders, assets) {
 
     folders.forEach(cat => {
       const folderEl = createFolderElement({ ...cat, children: [] });
-      const toggle = folderEl.querySelector('.tree-toggle');
-      if(toggle) toggle.style.visibility = 'hidden';
       elements.folderTree.appendChild(folderEl);
     });
   }
@@ -506,6 +504,9 @@ async function toggleFolder(row, category, childrenContainer) {
   const toggle = row.querySelector('.tree-toggle');
   const icon = row.querySelector('.tree-icon');
   const isExpanded = childrenContainer.classList.contains('expanded');
+  
+  const assetsContainer = childrenContainer.querySelector('.assets-container');
+
   if (isExpanded) {
     childrenContainer.classList.remove('expanded');
     toggle.classList.remove('rotated');
@@ -514,7 +515,10 @@ async function toggleFolder(row, category, childrenContainer) {
     childrenContainer.classList.add('expanded');
     toggle.classList.add('rotated');
     icon.textContent = 'folder_open';
-    if (!state.loadedCategories.has(category.id)) {
+    
+    const isDomEmpty = assetsContainer && assetsContainer.children.length === 0;
+    
+    if (!state.loadedCategories.has(category.id) || isDomEmpty) {
       await loadAssetsForCategory(category.id);
     }
   }
@@ -523,13 +527,22 @@ async function toggleFolder(row, category, childrenContainer) {
 async function loadAssetsForCategory(categoryId) {
   const assetsContainer = document.querySelector(`.assets-container[data-category-id="${categoryId}"]`);
   if (!assetsContainer) return;
+
+  if (state.assets[categoryId]) {
+    renderAssets(assetsContainer, state.assets[categoryId]);
+    state.loadedCategories.add(categoryId);
+    return;
+  }
+
   const assetTypes = getSelectedAssetTypes();
   if (assetTypes.length === 0) {
     renderAssets(assetsContainer, []);
     state.loadedCategories.add(categoryId);
     return;
   }
+
   assetsContainer.innerHTML = `<div style="padding:8px;font-size:11px;color:#999;">${getMsg('loading')}</div>`;
+  
   try {
     const response = await sendMessage({
       action: 'getAssetsByCategory',
@@ -537,6 +550,7 @@ async function loadAssetsForCategory(categoryId) {
       categoryId: categoryId,
       assetTypes: assetTypes
     });
+
     if (response.success) {
       const assets = response.data.items || [];
       state.assets[categoryId] = assets;
