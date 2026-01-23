@@ -551,7 +551,33 @@ async function insertDERow(stack, deKey, rowData) {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   const handleAsync = async () => {
     try {
-      switch (request.action) {
+      switch(request.action) {
+
+        case 'searchAssets':
+          const searchQuery = {
+            page: { page: 1, pageSize: 50 },
+            query: {
+              leftOperand: {
+                property: "name",
+                simpleOperator: "like",
+                value: request.term
+              },
+              logicalOperator: "AND",
+              rightOperand: {
+                property: "assetType.id",
+                simpleOperator: "in",
+                value: [208, 207, 197, 196, 209]
+              }
+            },
+            fields: ['id', 'name', 'assetType', 'category', 'modifiedDate']
+          };
+
+          const searchResults = await makeSessionRequest(request.stack, '/cloud/fuelapi/asset/v1/content/assets/query', {
+            method: 'POST',
+            body: JSON.stringify(searchQuery)
+          });
+          return { success: true, data: searchResults };
+
         case 'checkSession':
           try {
             const tokenData = await getAccessToken(request.stack);
