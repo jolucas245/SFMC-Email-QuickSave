@@ -554,6 +554,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       switch(request.action) {
 
         case 'searchAssets':
+          const defaultTypes = [208, 207, 197, 196, 209];
+          const filterTypes = request.assetTypes && request.assetTypes.length > 0 
+            ? request.assetTypes 
+            : defaultTypes;
           const searchQuery = {
             page: { page: 1, pageSize: 50 },
             query: {
@@ -566,7 +570,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               rightOperand: {
                 property: "assetType.id",
                 simpleOperator: "in",
-                value: [208, 207, 197, 196, 209]
+                value: filterTypes
               }
             },
             fields: ['id', 'name', 'assetType', 'category', 'modifiedDate']

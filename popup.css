@@ -257,7 +257,7 @@ body {
 }
 
 .list-header {
-  flex: 0 0 auto;         /* Altura fixa */
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -269,7 +269,7 @@ body {
 }
 
 .search-box {
-  flex: 0 0 auto;         /* Altura fixa, não estica */
+  flex: 0 0 auto;
   width: auto;
   margin: 10px 12px 0 12px;
   display: flex;
@@ -277,8 +277,32 @@ body {
   height: 32px;
   background: #f3f3f3;
   border-radius: 4px;
-  padding: 0 8px;
+  padding: 0 4px;
+  gap: 4px;
   border: 1px solid transparent;
+}
+
+.search-select {
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  color: var(--text-main);
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+  height: 100%;
+  padding-right: 4px;
+}
+
+.search-select:hover {
+  color: var(--primary);
+}
+
+.divider-vertical {
+  width: 1px;
+  height: 18px;
+  background-color: var(--border);
+  margin: 0 4px;
 }
 
 .search-box:focus-within {
@@ -297,7 +321,7 @@ body {
   outline: none;
   padding: 0 6px;
   margin: 0;
-  width: 100%;
+  width: auto;
   line-height: normal;
 }
 
@@ -376,19 +400,19 @@ body {
 .asset-row {
   display: flex;
   align-items: center;
-  white-space: nowrap;    /* Impede quebra de linha do texto */
-  width: 100%;            /* Ocupa 100% do container pai (que pode ser largo) */
-  padding: 6px 12px;      /* Espaçamento interno */
-  padding-right: 20px;    /* Espaço extra na direita para não colar no scroll */
+  white-space: nowrap;
+  width: 100%;
+  padding: 6px 12px;
+  padding-right: 20px;
   box-sizing: border-box;
   cursor: pointer;
 }
 
 .tree-label, 
 .asset-name {
-  flex: 0 0 auto;         /* Não encolhe */
-  overflow: visible;      /* Mostra tudo */
-  text-overflow: clip;    /* Sem reticências (...) */
+  flex: 0 0 auto;
+  overflow: visible;
+  text-overflow: clip;
   white-space: nowrap;
 }
 
