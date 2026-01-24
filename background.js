@@ -559,7 +559,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             ? request.assetTypes 
             : defaultTypes;
           const searchQuery = {
-            page: { page: 1, pageSize: 50 },
+            page: { page: 1, pageSize: 100 },
             query: {
               leftOperand: {
                 property: "name",
