@@ -261,7 +261,7 @@ function handleSearchInput(e) {
 }
 
 async function performSearch(term) {
-  const searchType = elements.searchType.value; // 'all', 'folder', 'email', 'template', 'block'
+  const searchType = elements.searchType.value;
   
   elements.folderTree.innerHTML = `
     <div class="placeholder-state">
@@ -274,9 +274,9 @@ async function performSearch(term) {
     let matchingAssets = [];
 
     if (searchType === 'all' || searchType === 'folder') {
-      matchingFolders = state.categories.filter(cat => 
-        cat.name.toLowerCase().includes(term.toLowerCase())
-      );
+      matchingFolders = state.categories
+        .filter(cat => cat.name.toLowerCase().includes(term.toLowerCase()))
+        .map(cat => state.categoryMap[cat.id]);
     }
 
     if (searchType !== 'folder') {
@@ -333,7 +333,7 @@ function renderSearchResults(term, folders, assets) {
     elements.folderTree.appendChild(folderHeader);
 
     folders.forEach(cat => {
-      const folderEl = createFolderElement({ ...cat, children: [] });
+      const folderEl = createFolderElement(cat); 
       elements.folderTree.appendChild(folderEl);
     });
   }
@@ -484,15 +484,15 @@ async function loadCategories() {
 
 function buildCategoryTree() {
   state.categoryTree = {};
-  const categoryMap = {};
+  state.categoryMap = {};
   state.categories.forEach(cat => {
-    categoryMap[cat.id] = { ...cat, children: [] };
+    state.categoryMap[cat.id] = { ...cat, children: [] };
   });
   state.categories.forEach(cat => {
-    if (cat.parentId && categoryMap[cat.parentId]) {
-      categoryMap[cat.parentId].children.push(categoryMap[cat.id]);
+    if (cat.parentId && state.categoryMap[cat.parentId]) {
+      state.categoryMap[cat.parentId].children.push(state.categoryMap[cat.id]);
     } else if (!cat.parentId || cat.parentId === 0) {
-      state.categoryTree[cat.id] = categoryMap[cat.id];
+      state.categoryTree[cat.id] = state.categoryMap[cat.id];
     }
   });
   const sortChildren = (node) => {
@@ -501,7 +501,7 @@ function buildCategoryTree() {
       node.children.forEach(sortChildren);
     }
   };
-  Object.values(state.categoryTree).forEach(sortChildren);
+  Object.values(state.categoryMap).forEach(sortChildren);
 }
 
 function renderFolderTree() {
