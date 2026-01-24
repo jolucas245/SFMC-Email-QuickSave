@@ -274,9 +274,10 @@ async function performSearch(term) {
     let matchingAssets = [];
 
     if (searchType === 'all' || searchType === 'folder') {
-      matchingFolders = state.categories
-        .filter(cat => cat.name.toLowerCase().includes(term.toLowerCase()))
-        .map(cat => state.categoryMap[cat.id]);
+      const source = state.categoryMap ? Object.values(state.categoryMap) : state.categories;
+      matchingFolders = source.filter(cat => 
+        cat.name.toLowerCase().includes(term.toLowerCase())
+      );
     }
 
     if (searchType !== 'folder') {
@@ -285,16 +286,16 @@ async function performSearch(term) {
       
       switch(searchType) {
         case 'email':
-          assetTypesIds = [208, 209, 242];
+          assetTypesIds = [208, 209, 242, 207]; 
           break;
         case 'template':
-          assetTypesIds = [207];
+          assetTypesIds = [4]; 
           break;
         case 'block':
-          assetTypesIds = [196, 197];
+          assetTypesIds = [196, 197, 205]; 
           break;
         default:
-          assetTypesIds = [208, 207, 197, 196, 209];
+          assetTypesIds = [208, 209, 242, 207, 4, 196, 197, 205];
       }
 
       const response = await sendMessage({
@@ -309,7 +310,7 @@ async function performSearch(term) {
       }
     }
 
-    renderSearchResults(term, matchingFolders, matchingAssets);
+    renderSearchResults(term, matchingFolders, matchingAssets, searchType);
 
   } catch (error) {
     console.error(error);
@@ -317,15 +318,36 @@ async function performSearch(term) {
   }
 }
 
-function renderSearchResults(term, folders, assets) {
+function renderSearchResults(term, folders, assets, searchType) {
   elements.folderTree.innerHTML = '';
   
-  if (folders.length === 0 && assets.length === 0) {
-    elements.folderTree.innerHTML = `<div style="padding:16px;text-align:center">Nenhum resultado para "${term}"</div>`;
+  let filteredAssets = assets;
+  if (searchType === 'template') {
+    filteredAssets = assets.filter(a => a.assetType && a.assetType.id === 4);
+  } else if (searchType === 'block') {
+    filteredAssets = assets.filter(a => a.assetType && a.assetType.name.toLowerCase().includes('block'));
+  }
+
+  const hasFolders = folders.length > 0;
+  const hasAssets = filteredAssets.length > 0;
+
+  if (!hasFolders && !hasAssets) {
+    let msg = `Nenhum resultado para "${term}"`;
+    
+    if (searchType === 'template') msg = `Nenhum Template encontrado com "${term}"`;
+    else if (searchType === 'block') msg = `Nenhum Bloco encontrado com "${term}"`;
+    else if (searchType === 'email') msg = `Nenhum Email encontrado com "${term}"`;
+    else if (searchType === 'folder') msg = `Nenhuma Pasta encontrada com "${term}"`;
+
+    elements.folderTree.innerHTML = `
+      <div style="padding:24px 16px; text-align:center; color: #706e6b;">
+        <span class="material-icons" style="font-size: 32px; margin-bottom: 8px; color: #dddbda;">search_off</span>
+        <p style="margin:0;">${msg}</p>
+      </div>`;
     return;
   }
 
-  if (folders.length > 0) {
+  if (hasFolders) {
     const folderHeader = document.createElement('div');
     folderHeader.className = 'sidebar-label';
     folderHeader.style.padding = '8px';
@@ -338,15 +360,21 @@ function renderSearchResults(term, folders, assets) {
     });
   }
 
-  if (assets.length > 0) {
+  if (hasAssets) {
     const assetHeader = document.createElement('div');
     assetHeader.className = 'sidebar-label';
     assetHeader.style.padding = '8px 8px 0 8px';
-    assetHeader.style.marginTop = '12px';
-    assetHeader.textContent = `CONTEÚDO (${assets.length})`;
+    if (hasFolders) assetHeader.style.marginTop = '12px';
+    
+    let typeLabel = "CONTEÚDO";
+    if (searchType === 'template') typeLabel = "TEMPLATES";
+    else if (searchType === 'block') typeLabel = "BLOCOS";
+    else if (searchType === 'email') typeLabel = "EMAILS";
+
+    assetHeader.textContent = `${typeLabel} (${filteredAssets.length})`;
     elements.folderTree.appendChild(assetHeader);
 
-    assets.forEach(asset => {
+    filteredAssets.forEach(asset => {
       const assetEl = createAssetElement(asset);
       assetEl.style.marginLeft = '0';
       elements.folderTree.appendChild(assetEl);
