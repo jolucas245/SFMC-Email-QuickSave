@@ -126,6 +126,37 @@ async function fetchWithPagination(stack, endpoint, itemsKey = 'items', pageSize
   return results;
 }
 
+async function fetchWithPaginationPost(stack, endpoint, payloadBase) {
+  const results = [];
+  let page = 1;
+  const pageSize = 500;
+  let hasMore = true;
+
+  const payload = { ...payloadBase };
+  if (!payload.page) payload.page = {};
+  payload.page.pageSize = pageSize;
+
+  while (hasMore) {
+    payload.page.page = page;
+
+    const response = await makeSessionRequest(stack, endpoint, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+
+    const items = response.items || [];
+    results.push(...items);
+
+    if (items.length < pageSize) {
+      hasMore = false;
+    } else {
+      page++;
+    }
+  }
+
+  return { items: results, count: results.length };
+}
+
 async function listAllCategories(stack) {
   return await fetchWithPagination(
     stack, 
@@ -136,24 +167,19 @@ async function listAllCategories(stack) {
 }
 
 async function listAssetsByCategory(stack, categoryId, assetTypes = ['htmlemail', 'templatebasedemail', 'htmlblock']) {
-  const baseUrl = getBaseUrl(stack);
-  
   const typeIdMap = {
     'htmlemail': 208,
     'templatebasedemail': 207,
     'htmlblock': 197,
-    'textonlyemail': 209
+    'textonlyemail': 209,
+    'template': 4
   };
   
   const typeIds = assetTypes
     .map(type => typeIdMap[type.toLowerCase()])
     .filter(id => id !== undefined);
   
-  const query = {
-    page: {
-      page: 1,
-      pageSize: 500
-    },
+  const queryPayload = {
     query: {
       leftOperand: {
         property: 'category.id',
@@ -168,22 +194,15 @@ async function listAssetsByCategory(stack, categoryId, assetTypes = ['htmlemail'
       }
     },
     sort: [
-      {
-        property: 'name',
-        direction: 'ASC'
-      }
+      { property: 'name', direction: 'ASC' }
     ],
     fields: ['id', 'name', 'assetType', 'category', 'modifiedDate', 'createdDate']
   };
   
   try {
-    const response = await makeSessionRequest(stack, '/cloud/fuelapi/asset/v1/content/assets/query', {
-      method: 'POST',
-      body: JSON.stringify(query)
-    });
-    return response;
+    return await fetchWithPaginationPost(stack, '/cloud/fuelapi/asset/v1/content/assets/query', queryPayload);
   } catch (error) {
-    console.log('Tentando método alternativo...');
+    console.log('Erro no método query, tentando fallback...', error);
     const items = await fetchWithPagination(
       stack,
       `/cloud/fuelapi/asset/v1/content/assets?$filter=category.id%20eq%20${categoryId}`,
@@ -558,8 +577,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           const filterTypes = request.assetTypes && request.assetTypes.length > 0 
             ? request.assetTypes 
             : defaultTypes;
+            
           const searchQuery = {
-            page: { page: 1, pageSize: 100 },
             query: {
               leftOperand: {
                 property: "name",
@@ -576,10 +595,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             fields: ['id', 'name', 'assetType', 'category', 'modifiedDate']
           };
 
-          const searchResults = await makeSessionRequest(request.stack, '/cloud/fuelapi/asset/v1/content/assets/query', {
-            method: 'POST',
-            body: JSON.stringify(searchQuery)
-          });
+          const searchResults = await fetchWithPaginationPost(
+            request.stack, 
+            '/cloud/fuelapi/asset/v1/content/assets/query', 
+            searchQuery
+          );
+          
           return { success: true, data: searchResults };
 
         case 'checkSession':
