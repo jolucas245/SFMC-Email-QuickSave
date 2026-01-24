@@ -72,6 +72,19 @@
     </aside>
     <div id="resizer"></div>
     <main class="content-area">
+      <div class="search-box">
+        <select id="search-type" class="search-select">
+          <option value="all" data-i18n="filterAll">Todos</option>
+          <option value="folder" data-i18n="filterFolder">Pasta</option>
+          <option value="email" data-i18n="filterEmail">Email</option>
+          <option value="template" data-i18n="filterTemplate">Template</option>
+          <option value="block" data-i18n="filterBlock">Block</option>
+        </select>
+        <span class="divider-vertical"></span>
+        <span class="material-icons search-icon">search</span>
+        <input type="text" id="search-input" placeholder="Buscar..." autocomplete="off">
+        <button id="clear-search" class="hidden">×</button>
+      </div>
       <div class="list-header">
         <label class="checkbox-wrapper select-all-wrapper">
           <input type="checkbox" id="select-all">

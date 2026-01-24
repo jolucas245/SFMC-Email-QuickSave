@@ -21,6 +21,11 @@ const translations = {
     emptyFolder: "Vazia",
     downloading: "Baixando...",
     processing: "Processando",
+    filterAll: "Todos",
+    filterFolder: "Pasta",
+    filterEmail: "Email",
+    filterTemplate: "Template",
+    filterBlock: "Block",
     resolvingBlocks: "Resolvendo Content Blocks...",
     downloadingImages: "Baixando imagens...",
     success: "Sucesso!",
@@ -49,6 +54,11 @@ const translations = {
     optionIncludeImages: "Include Images",
     foldersTitle: "Folders & Content",
     loading: "Loading...",
+    filterAll: "All",
+    filterFolder: "Folder",
+    filterEmail: "Email",
+    filterTemplate: "Template",
+    filterBlock: "Block",
     downloadSelected: "Download Selected",
     sessionErrorTitle: "No Session",
     sessionErrorDesc: "Please login to Marketing Cloud to continue.",
@@ -105,6 +115,8 @@ const elements = {
   options: {}
 };
 
+let searchTimeout = null;
+
 document.addEventListener('DOMContentLoaded', async () => {
   initElements();
   initResizer();
@@ -125,6 +137,9 @@ function initElements() {
   elements.selectionCount = document.getElementById('selection-count');
   elements.overlayLoading = document.getElementById('overlay-loading');
   elements.overlayMsg = document.getElementById('overlay-msg');
+  elements.searchType = document.getElementById('search-type');
+  elements.searchInput = document.getElementById('search-input');
+  elements.clearSearch = document.getElementById('clear-search');
   elements.filters = {
     email: document.getElementById('filter-htmlemail'),
     template: document.getElementById('filter-templatebasedemail'),
@@ -162,14 +177,23 @@ function initEventListeners() {
   document.getElementById('btn-collapse-all').addEventListener('click', collapseAllFolders);
   document.getElementById('btn-retry').addEventListener('click', checkSession);
   document.getElementById('modal-close-btn').addEventListener('click', () => elements.overlayMsg.classList.add('hidden'));
+  elements.searchInput.addEventListener('input', handleSearchInput);
+  elements.clearSearch.addEventListener('click', clearSearch);
   elements.btnDownload.addEventListener('click', downloadSelected);
   elements.selectAll.addEventListener('change', toggleSelectAll);
+
+  elements.searchType.addEventListener('change', () => {
+    const term = elements.searchInput.value.trim();
+    if (term.length >= 3) {
+      performSearch(term);
+    }
+  });
 
   const authorLink = document.getElementById('author-link');
   if (authorLink) {
     authorLink.addEventListener('click', (e) => {
       e.preventDefault();
-      chrome.tabs.create({ url: 'https://linkedin.com/in/jolucas240' });
+      chrome.tabs.create({ url: 'https://linkedin.com/in/jolucas245' });
     });
   }
 
@@ -219,6 +243,149 @@ function initEventListeners() {
   Object.values(elements.filters).forEach(filter => {
     filter.addEventListener('change', reloadCurrentFolders);
   });
+}
+
+function handleSearchInput(e) {
+  const term = e.target.value.trim();
+  
+  elements.clearSearch.classList.toggle('hidden', term.length === 0);
+  
+  if (searchTimeout) clearTimeout(searchTimeout);
+
+  if (term.length < 3) {
+    if (term.length === 0) renderFolderTree();
+    return;
+  }
+
+  searchTimeout = setTimeout(() => performSearch(term), 500);
+}
+
+async function performSearch(term) {
+  const searchType = elements.searchType.value;
+  
+  elements.folderTree.innerHTML = `
+    <div class="placeholder-state">
+      <div class="spinner"></div>
+      <p>Buscando por "${term}"...</p>
+    </div>`;
+
+  try {
+    let matchingFolders = [];
+    let matchingAssets = [];
+
+    if (searchType === 'all' || searchType === 'folder') {
+      const source = state.categoryMap ? Object.values(state.categoryMap) : state.categories;
+      matchingFolders = source.filter(cat => 
+        cat.name.toLowerCase().includes(term.toLowerCase())
+      );
+    }
+
+    if (searchType !== 'folder') {
+      
+      let assetTypesIds = [];
+      
+      switch(searchType) {
+        case 'email':
+          assetTypesIds = [208, 209, 242, 207]; 
+          break;
+        case 'template':
+          assetTypesIds = [4]; 
+          break;
+        case 'block':
+          assetTypesIds = [196, 197, 205]; 
+          break;
+        default:
+          assetTypesIds = [208, 209, 242, 207, 4, 196, 197, 205];
+      }
+
+      const response = await sendMessage({
+        action: 'searchAssets',
+        stack: state.stack,
+        term: term,
+        assetTypes: assetTypesIds 
+      });
+
+      if (response.success && response.data.items) {
+        matchingAssets = response.data.items;
+      }
+    }
+
+    renderSearchResults(term, matchingFolders, matchingAssets, searchType);
+
+  } catch (error) {
+    console.error(error);
+    elements.folderTree.innerHTML = `<div style="padding:16px;color:red">Erro na busca.</div>`;
+  }
+}
+
+function renderSearchResults(term, folders, assets, searchType) {
+  elements.folderTree.innerHTML = '';
+  
+  let filteredAssets = assets;
+  if (searchType === 'template') {
+    filteredAssets = assets.filter(a => a.assetType && a.assetType.id === 4);
+  } else if (searchType === 'block') {
+    filteredAssets = assets.filter(a => a.assetType && a.assetType.name.toLowerCase().includes('block'));
+  }
+
+  const hasFolders = folders.length > 0;
+  const hasAssets = filteredAssets.length > 0;
+
+  if (!hasFolders && !hasAssets) {
+    let msg = `Nenhum resultado para "${term}"`;
+    
+    if (searchType === 'template') msg = `Nenhum Template encontrado com "${term}"`;
+    else if (searchType === 'block') msg = `Nenhum Bloco encontrado com "${term}"`;
+    else if (searchType === 'email') msg = `Nenhum Email encontrado com "${term}"`;
+    else if (searchType === 'folder') msg = `Nenhuma Pasta encontrada com "${term}"`;
+
+    elements.folderTree.innerHTML = `
+      <div style="padding:24px 16px; text-align:center; color: #706e6b;">
+        <span class="material-icons" style="font-size: 32px; margin-bottom: 8px; color: #dddbda;">search_off</span>
+        <p style="margin:0;">${msg}</p>
+      </div>`;
+    return;
+  }
+
+  if (hasFolders) {
+    const folderHeader = document.createElement('div');
+    folderHeader.className = 'sidebar-label';
+    folderHeader.style.padding = '8px';
+    folderHeader.textContent = `PASTAS (${folders.length})`;
+    elements.folderTree.appendChild(folderHeader);
+
+    folders.forEach(cat => {
+      const folderEl = createFolderElement(cat); 
+      elements.folderTree.appendChild(folderEl);
+    });
+  }
+
+  if (hasAssets) {
+    const assetHeader = document.createElement('div');
+    assetHeader.className = 'sidebar-label';
+    assetHeader.style.padding = '8px 8px 0 8px';
+    if (hasFolders) assetHeader.style.marginTop = '12px';
+    
+    let typeLabel = "CONTEÚDO";
+    if (searchType === 'template') typeLabel = "TEMPLATES";
+    else if (searchType === 'block') typeLabel = "BLOCOS";
+    else if (searchType === 'email') typeLabel = "EMAILS";
+
+    assetHeader.textContent = `${typeLabel} (${filteredAssets.length})`;
+    elements.folderTree.appendChild(assetHeader);
+
+    filteredAssets.forEach(asset => {
+      const assetEl = createAssetElement(asset);
+      assetEl.style.marginLeft = '0';
+      elements.folderTree.appendChild(assetEl);
+    });
+  }
+}
+
+function clearSearch() {
+  elements.searchInput.value = '';
+  elements.clearSearch.classList.add('hidden');
+  renderFolderTree();
 }
 
 async function fullReload() {
@@ -345,15 +512,15 @@ async function loadCategories() {
 
 function buildCategoryTree() {
   state.categoryTree = {};
-  const categoryMap = {};
+  state.categoryMap = {};
   state.categories.forEach(cat => {
-    categoryMap[cat.id] = { ...cat, children: [] };
+    state.categoryMap[cat.id] = { ...cat, children: [] };
   });
   state.categories.forEach(cat => {
-    if (cat.parentId && categoryMap[cat.parentId]) {
-      categoryMap[cat.parentId].children.push(categoryMap[cat.id]);
+    if (cat.parentId && state.categoryMap[cat.parentId]) {
+      state.categoryMap[cat.parentId].children.push(state.categoryMap[cat.id]);
     } else if (!cat.parentId || cat.parentId === 0) {
-      state.categoryTree[cat.id] = categoryMap[cat.id];
+      state.categoryTree[cat.id] = state.categoryMap[cat.id];
     }
   });
   const sortChildren = (node) => {
@@ -362,7 +529,7 @@ function buildCategoryTree() {
       node.children.forEach(sortChildren);
     }
   };
-  Object.values(state.categoryTree).forEach(sortChildren);
+  Object.values(state.categoryMap).forEach(sortChildren);
 }
 
 function renderFolderTree() {
@@ -412,6 +579,9 @@ async function toggleFolder(row, category, childrenContainer) {
   const toggle = row.querySelector('.tree-toggle');
   const icon = row.querySelector('.tree-icon');
   const isExpanded = childrenContainer.classList.contains('expanded');
+  
+  const assetsContainer = childrenContainer.querySelector('.assets-container');
+
   if (isExpanded) {
     childrenContainer.classList.remove('expanded');
     toggle.classList.remove('rotated');
@@ -420,7 +590,10 @@ async function toggleFolder(row, category, childrenContainer) {
     childrenContainer.classList.add('expanded');
     toggle.classList.add('rotated');
     icon.textContent = 'folder_open';
-    if (!state.loadedCategories.has(category.id)) {
+    
+    const isDomEmpty = assetsContainer && assetsContainer.children.length === 0;
+    
+    if (!state.loadedCategories.has(category.id) || isDomEmpty) {
       await loadAssetsForCategory(category.id);
     }
   }
@@ -429,13 +602,22 @@ async function toggleFolder(row, category, childrenContainer) {
 async function loadAssetsForCategory(categoryId) {
   const assetsContainer = document.querySelector(`.assets-container[data-category-id="${categoryId}"]`);
   if (!assetsContainer) return;
+
+  if (state.assets[categoryId]) {
+    renderAssets(assetsContainer, state.assets[categoryId]);
+    state.loadedCategories.add(categoryId);
+    return;
+  }
+
   const assetTypes = getSelectedAssetTypes();
   if (assetTypes.length === 0) {
     renderAssets(assetsContainer, []);
     state.loadedCategories.add(categoryId);
     return;
   }
+
   assetsContainer.innerHTML = `<div style="padding:8px;font-size:11px;color:#999;">${getMsg('loading')}</div>`;
+  
   try {
     const response = await sendMessage({
       action: 'getAssetsByCategory',
@@ -443,6 +625,7 @@ async function loadAssetsForCategory(categoryId) {
       categoryId: categoryId,
       assetTypes: assetTypes
     });
+
     if (response.success) {
       const assets = response.data.items || [];
       state.assets[categoryId] = assets;
