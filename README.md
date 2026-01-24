@@ -1,3 +1,8 @@
+[![Chrome Web Store](https://img.shields.io/badge/Chrome%20Web%20Store-Install-blue?style=for-the-badge&logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/sfmc-email-template-quick/bimflcbpdienlgbodpodaaagmdajdnfg)
+
+
+
+
 # SFMC Email & Template QuickSave
 
 > **Product Type:** Google Chrome Browser Extension (Software)<br>
