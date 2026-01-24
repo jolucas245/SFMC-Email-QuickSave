@@ -21,6 +21,11 @@ const translations = {
     emptyFolder: "Vazia",
     downloading: "Baixando...",
     processing: "Processando",
+    filterAll: "Todos",
+    filterFolder: "Pasta",
+    filterEmail: "Email",
+    filterTemplate: "Template",
+    filterBlock: "Block",
     resolvingBlocks: "Resolvendo Content Blocks...",
     downloadingImages: "Baixando imagens...",
     success: "Sucesso!",
@@ -49,6 +54,11 @@ const translations = {
     optionIncludeImages: "Include Images",
     foldersTitle: "Folders & Content",
     loading: "Loading...",
+    filterAll: "All",
+    filterFolder: "Folder",
+    filterEmail: "Email",
+    filterTemplate: "Template",
+    filterBlock: "Block",
     downloadSelected: "Download Selected",
     sessionErrorTitle: "No Session",
     sessionErrorDesc: "Please login to Marketing Cloud to continue.",
@@ -127,6 +137,7 @@ function initElements() {
   elements.selectionCount = document.getElementById('selection-count');
   elements.overlayLoading = document.getElementById('overlay-loading');
   elements.overlayMsg = document.getElementById('overlay-msg');
+  elements.searchType = document.getElementById('search-type');
   elements.searchInput = document.getElementById('search-input');
   elements.clearSearch = document.getElementById('clear-search');
   elements.filters = {
@@ -171,11 +182,18 @@ function initEventListeners() {
   elements.btnDownload.addEventListener('click', downloadSelected);
   elements.selectAll.addEventListener('change', toggleSelectAll);
 
+  elements.searchType.addEventListener('change', () => {
+    const term = elements.searchInput.value.trim();
+    if (term.length >= 3) {
+      performSearch(term);
+    }
+  });
+
   const authorLink = document.getElementById('author-link');
   if (authorLink) {
     authorLink.addEventListener('click', (e) => {
       e.preventDefault();
-      chrome.tabs.create({ url: 'https://linkedin.com/in/jolucas240' });
+      chrome.tabs.create({ url: 'https://linkedin.com/in/jolucas245' });
     });
   }
 
@@ -243,6 +261,8 @@ function handleSearchInput(e) {
 }
 
 async function performSearch(term) {
+  const searchType = elements.searchType.value; // 'all', 'folder', 'email', 'template', 'block'
+  
   elements.folderTree.innerHTML = `
     <div class="placeholder-state">
       <div class="spinner"></div>
@@ -250,17 +270,44 @@ async function performSearch(term) {
     </div>`;
 
   try {
-    const matchingFolders = state.categories.filter(cat => 
-      cat.name.toLowerCase().includes(term.toLowerCase())
-    );
+    let matchingFolders = [];
+    let matchingAssets = [];
 
-    const response = await sendMessage({
-      action: 'searchAssets',
-      stack: state.stack,
-      term: term
-    });
+    if (searchType === 'all' || searchType === 'folder') {
+      matchingFolders = state.categories.filter(cat => 
+        cat.name.toLowerCase().includes(term.toLowerCase())
+      );
+    }
 
-    const matchingAssets = response.success && response.data.items ? response.data.items : [];
+    if (searchType !== 'folder') {
+      
+      let assetTypesIds = [];
+      
+      switch(searchType) {
+        case 'email':
+          assetTypesIds = [208, 209, 242];
+          break;
+        case 'template':
+          assetTypesIds = [207];
+          break;
+        case 'block':
+          assetTypesIds = [196, 197];
+          break;
+        default:
+          assetTypesIds = [208, 207, 197, 196, 209];
+      }
+
+      const response = await sendMessage({
+        action: 'searchAssets',
+        stack: state.stack,
+        term: term,
+        assetTypes: assetTypesIds 
+      });
+
+      if (response.success && response.data.items) {
+        matchingAssets = response.data.items;
+      }
+    }
 
     renderSearchResults(term, matchingFolders, matchingAssets);
 
