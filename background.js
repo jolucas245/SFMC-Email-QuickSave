@@ -214,7 +214,17 @@ async function listAssetsByCategory(stack, categoryId, assetTypes = ['htmlemail'
 }
 
 async function getAssetContent(stack, assetId) {
-  return await makeSessionRequest(stack, `/cloud/fuelapi/asset/v1/content/assets/${assetId}`);
+  const asset = await makeSessionRequest(stack, `/cloud/fuelapi/asset/v1/content/assets/${assetId}`);
+  
+  if (asset.views?.html?.slots) {
+    let html = asset.views?.html?.content || asset.content || '';
+    html = compileAssetSlots(asset);
+    if (!asset.views) asset.views = {};
+    if (!asset.views.html) asset.views.html = {};
+    asset.views.html.content = html;
+  }
+  
+  return asset;
 }
 
 async function getAssetById(stack, assetId) {
@@ -324,25 +334,27 @@ function compileAssetSlots(asset) {
   if (asset.views?.html?.slots) {
     const slots = asset.views.html.slots;
     for (const [slotKey, slotData] of Object.entries(slots)) {
-      if (slotData.blocks) {
+      if (slotData.blocks && typeof slotData.blocks === 'object') {
         let slotContent = '';
-        for (const block of slotData.blocks) {
+        for (const [blockKey, block] of Object.entries(slotData.blocks)) {
           if (block.content) {
             slotContent += block.content;
           } else if (block.superContent) {
             slotContent += block.superContent;
+          } else if (block.design) {
+            slotContent += block.design;
           }
         }
-        const slotPlaceholder = new RegExp(`<div[^>]*data-slot=["']${slotKey}["'][^>]*>.*?</div>`, 'gis');
+        const slotPlaceholder = new RegExp(`<div[^>]*data-type=["']slot["'][^>]*data-key=["']${slotKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["'][^>]*>.*?</div>`, 'gis');
         html = html.replace(slotPlaceholder, slotContent);
       }
     }
   }
   
-  if (asset.blocks) {
-    for (const block of asset.blocks) {
+  if (asset.blocks && typeof asset.blocks === 'object') {
+    for (const [blockKey, block] of Object.entries(asset.blocks)) {
       if (block.content) {
-        const blockPlaceholder = new RegExp(`%%=ContentBlockByKey\\s*\\(\\s*["']${block.customerKey}["']\\s*\\)=%%`, 'gi');
+        const blockPlaceholder = new RegExp(`%%=ContentBlockByKey\\s*\\(\\s*["']${block.customerKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["']\\s*\\)=%%`, 'gi');
         html = html.replace(blockPlaceholder, block.content);
       }
     }
