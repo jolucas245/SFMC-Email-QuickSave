@@ -21,6 +21,7 @@ const translations = {
     emptyFolder: "Vazia",
     downloading: "Baixando...",
     processing: "Processando",
+    searchPlaceholder: "Buscar...",
     filterAll: "Todos",
     filterFolder: "Pasta",
     filterEmail: "Email",
@@ -68,6 +69,7 @@ const translations = {
     emptyFolder: "Empty",
     downloading: "Downloading...",
     processing: "Processing",
+    searchPlaceholder: "Search...",
     resolvingBlocks: "Resolving Content Blocks...",
     downloadingImages: "Downloading images...",
     success: "Success!",
@@ -159,6 +161,10 @@ function setLanguage(lang) {
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
     if (t[key]) el.textContent = t[key];
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.getAttribute('data-i18n-placeholder');
+    if (t[key]) el.placeholder = t[key];
   });
   document.querySelectorAll('.lang-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.lang === lang);
